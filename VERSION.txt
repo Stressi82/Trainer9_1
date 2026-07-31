@@ -1,1 +1,4 @@
-QMB Lernplattform Version 9.1.1 – reparierte GitHub-Testversion
+Verkäufertrainer
+Version 1.1.0 · Verkäufer-Lernreise
+Fragenbestand: 920 Fragen · 23 Kapitel · 920 integrierte Verkaufsszenen
+Stand: 31.07.2026

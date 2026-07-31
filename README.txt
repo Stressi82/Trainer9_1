@@ -1,20 +1,23 @@
-QMB Lernplattform Version 9.1.1 – reparierte GitHub-Testversion
+VERKÄUFERTRAINER · VERSION 1.1 · VERKÄUFER-LERNREISE
 
-Enthalten:
-- vollständiger bestehender Prüfungstrainer mit unverändertem Fragenbestand
-- Prüfungssimulation, Fehlertraining, Lernfelder und Datenbankpflege
-- gespeicherte Sitzungen, aktuelle Statistik, Langzeitstatistik und Lernfeldanalyse
-- drei getrennte Open-Book-Freitextmodule: ISO, TÜV Modul 1 und TÜV Modul 2
-- drei getrennte lokale PDF-Suchen für die Prüfungsunterlagen
-- geführter QMB-Lernpfad, didaktisch inspiriert von Ricardo Leppe
-- klare Danksagung und Rollenabgrenzung
-- lokale PWA-Nutzung mit Offline-Cache
+Inhalt
+- 23 Kapitel mit jeweils 40 Fragen
+- insgesamt 920 Multiple-Choice-Fragen
+- vier Antwortmöglichkeiten A bis D
+- eine oder mehrere Antworten können richtig sein
+- durchgehende Verkäufer-Lernreise vom ersten Arbeitstag bis zum eigenen Marktkonzept
+- 920 integrierte Verkaufsszenen: eine Szene zu jeder Frage
+- Hilfe-Button mit Denkrichtung ohne Lösung
+- Geschichte, Lösungseinordnung und Gedächtnisanker nach jeder Antwort
+- ausführlichere Korrektur bei falscher Auswahl
+- Lernmodus, Testmodus, Fehlertraining, Katalog, Statistik und Datenbankpflege
+- optionale Erholungspause nach jeweils 50 Fragen
 
-Wichtig:
-Die Open-Book-Aufgaben verlangen die Recherche in den Originalunterlagen. Bei einer falschen Eingabe zeigt die App die hinterlegte Fundstelle statt einer vollständigen Musterlösung. Vor der Prüfung bitte alle Aufgaben und Fundstellen fachlich testen.
+Start
+Die Datei index.html im Browser öffnen. Für die Installation als PWA den Ordner über einen Webserver oder GitHub Pages bereitstellen.
 
-Reparaturhinweis:
-- Dateizuordnung geprüft und korrekt
-- Cache-Version erhöht, damit GitHub Pages keine beschädigte Altversion lädt
-- Funktionsumfang der Version 9.1 bleibt erhalten
-- Paket enthält genau 14 Dateien
+Datenbasis
+Multiple_Choice_Kapitel_1_bis_23.xlsx
+
+Lernreise
+Die 23 Etappen bilden eine zusammenhängende Entwicklung: neuer Verkäufer, Warenwirtschaft, Rechnungswesen, Recht, Beratung, Marketing, Onlinehandel und abschließend Unternehmensgründung. Die Originalfragen und Lösungsschlüssel wurden nicht ersetzt. Die Verkaufsszenen sind als zusätzliche Lernschicht hinterlegt.

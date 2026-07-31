@@ -2,8 +2,8 @@
   'use strict';
 
   const BASE_QUESTIONS = Array.isArray(window.QUESTION_DATA) ? window.QUESTION_DATA : [];
-  const STORE_KEY = 'qmb-lernplattform-v1';
-  const APP_SCHEMA_VERSION = 6;
+  const STORE_KEY = 'verkaeufertrainer-v1';
+  const APP_SCHEMA_VERSION = 21;
   const app = document.getElementById('app');
   let deferredInstall = null;
   let timerHandle = null;
@@ -32,7 +32,15 @@
     learningPathLastModule: null,
     documentSearchSource: 'iso',
     openBookProgress: {},
-    openBookHistory: []
+    openBookHistory: [],
+    openBookDifficulty: 'easy',
+    openBookSavedAnswers: {},
+    openBookHelpUsage: {},
+    openBookReflections: {},
+    pathHelpUsage: {},
+    auditJourneyProgress: {},
+    auditJourneyLastChapter: null,
+    auditHelpUsage: {}
   };
 
   let store = loadStore();
@@ -51,46 +59,14 @@
     openBookSource: null,
     openBookIndex: 0,
     openBookFeedback: null,
-    openBookStartedAt: null
+    openBookStartedAt: null,
+    openBookHelpVisible: false,
+    openBookDifficulty: 'easy'
   };
 
 
 
-  const OPEN_BOOK_MODULES = {
-    iso: {
-      title: 'ISO-Lernmodul', short: 'Freitextfragen mit externer Recherche in der ISO-Unterlage', document: 'ISO-Unterlage',
-      questions: [
-        {id:'iso-1', prompt:'Welche Anforderungen stellt ISO 9001 an Qualitätsziele? Formuliere die wesentlichen Merkmale vollständig.', source:'DIN EN ISO 9001:2015, Abschnitt 6.2.1', hints:['qualitätspolitik','messbar','überwacht','vermittelt','aktualisiert'], min:4},
-        {id:'iso-2', prompt:'Welche Punkte sind bei der Planung zum Erreichen von Qualitätszielen festzulegen?', source:'DIN EN ISO 9001:2015, Abschnitt 6.2.2', hints:['was','ressourcen','verantwortlich','wann','bewertet'], min:4},
-        {id:'iso-3', prompt:'Welche Aspekte sind beim Erstellen und Aktualisieren dokumentierter Information sicherzustellen?', source:'DIN EN ISO 9001:2015, Abschnitt 7.5.2', hints:['kennzeichnung','format','medium','überprüfung','genehmigung'], min:4},
-        {id:'iso-4', prompt:'Welche Anforderungen gelten für die Lenkung dokumentierter Information?', source:'DIN EN ISO 9001:2015, Abschnitt 7.5.3', hints:['verfügbar','geeignet','geschützt','verteilung','zugriff','aufbewahrung'], min:4},
-        {id:'iso-5', prompt:'Welche Anforderungen stellt ISO 9001 an das interne Auditprogramm?', source:'DIN EN ISO 9001:2015, Abschnitt 9.2.2', hints:['häufigkeit','methoden','verantwortlichkeiten','planung','berichterstattung','risiken'], min:4},
-        {id:'iso-6', prompt:'Welche Schritte verlangt ISO 9001 beim Auftreten einer Nichtkonformität?', source:'DIN EN ISO 9001:2015, Abschnitt 10.2.1', hints:['reagieren','ursache','wiederholung','maßnahmen','wirksamkeit','risiken'], min:4}
-      ]
-    },
-    modul1: {
-      title: 'TÜV Modul 1 Lernmodul', short: 'Freitextfragen mit externer Recherche im TÜV-Skript Modul 1', document: 'TÜV Modul 1',
-      questions: [
-        {id:'m1-1', prompt:'Was versteht die Normenreihe ISO 9000 ff. unter dem Kontext der Organisation?', source:'TÜV Modul 1, Kapitel 4.1 „Kontext der Organisation“, ab Seite 34', hints:['interne','externe','faktoren','zweck','ziele'], min:3},
-        {id:'m1-2', prompt:'Welche Gruppen können als relevante interessierte Parteien einer Organisation betrachtet werden?', source:'TÜV Modul 1, Kapitel 4.2 „Interessierte Parteien“, ab Seite 36', hints:['kunden','lieferanten','mitarbeiter','behörden','eigentümer'], min:3},
-        {id:'m1-3', prompt:'Welche Anforderungen müssen wirksame Qualitätsziele erfüllen?', source:'TÜV Modul 1, Kapitel 6.2.1 „Qualitätsziele“, Seite 46', hints:['qualitätspolitik','messbar','anforderungen','produktkonformität','kundenzufriedenheit','überwacht'], min:4},
-        {id:'m1-4', prompt:'Was muss die Organisation bei der Maßnahmenplanung für Risiken und Chancen sicherstellen?', source:'TÜV Modul 1, Kapitel 6.1.4 „Maßnahmenplanung“, Seite 45', hints:['planen','integriert','umgesetzt','wirksamkeit'], min:3},
-        {id:'m1-5', prompt:'Welche Arten dokumentierter Information benötigt ein Qualitätsmanagementsystem?', source:'TÜV Modul 1, Kapitel 7.5.1 „Dokumentierte Informationen“, ab Seite 63', hints:['norm','organisation','wirksamkeit','dokumentiert'], min:3},
-        {id:'m1-6', prompt:'Welche Bedeutung haben Leistungsindikatoren beziehungsweise Kennzahlen für Prozesse und Qualitätsziele?', source:'TÜV Modul 1, Kapitel 6.2.1 „Qualitätsziele“, Seite 46', hints:['überwacht','gesteuert','zielwerte','kennzahlen'], min:3}
-      ]
-    },
-    modul2: {
-      title: 'TÜV Modul 2 Lernmodul', short: 'Freitextfragen mit externer Recherche im TÜV-Skript Modul 2', document: 'TÜV Modul 2',
-      questions: [
-        {id:'m2-1', prompt:'Warum ist eine Nichtkonformität nach einer Sofortmaßnahme noch nicht als erledigt zu betrachten?', source:'TÜV Modul 2, Kapitel 8.7.2 „Korrekturmaßnahmen“, Seiten 22–23', hints:['ursache','wiederholung','vermeiden','korrekturmaßnahmen','optimierung'], min:3},
-        {id:'m2-2', prompt:'Welche Funktion hat die Analyse einer Nichtkonformität im Zusammenhang mit Korrekturmaßnahmen?', source:'TÜV Modul 2, Kapitel 8.7.2 „Korrekturmaßnahmen“, Seiten 22–23', hints:['ursache','tendenzen','wiederholungsfehler','vermeiden'], min:3},
-        {id:'m2-3', prompt:'Welche grundlegenden Auditarten werden unterschieden und wodurch unterscheiden sie sich?', source:'TÜV Modul 2, Kapitel 11.1.2 „Auditarten im Überblick“, ab Seite 46', hints:['first','second','third','intern','lieferant','zertifizierung'], min:3},
-        {id:'m2-4', prompt:'Welche Funktionen erfüllt ein internes Audit innerhalb eines Managementsystems?', source:'TÜV Modul 2, Kapitel 11.2.1 „Funktionen des internen Audits“, ab Seite 53', hints:['konformität','wirksamkeit','verbesserung','information'], min:3},
-        {id:'m2-5', prompt:'Welche Bedeutung haben Analyse und Bewertung für Verbesserungsmaßnahmen und Managementbewertung?', source:'TÜV Modul 2, Kapitel 9 „Bewertung der Leistung“, ab Seite 24', hints:['daten','leistung','verbesserung','managementbewertung'], min:3},
-        {id:'m2-6', prompt:'Warum bewirkt eine Prüfung allein noch keine Verbesserung eines Produkts oder Prozesses?', source:'TÜV Modul 2, Abschnitt zur fortlaufenden Verbesserung und Qualitätsprüfung, ab Seite 31', hints:['ursache','prozess','maßnahme','verbesserung'], min:3}
-      ]
-    }
-  };
+  const OPEN_BOOK_MODULES = {};
 
   function normalizeOpenBookAnswer(value='') {
     return String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9äöüß]+/g,' ');
@@ -102,51 +78,47 @@
   function openBookQuestionStats(id) {
     return store.openBookProgress?.[id] || {attempts:0, correct:0, lastAt:null};
   }
+  function openBookDifficultyLabel(level) {
+    return level === 'easy' ? 'Leicht' : level === 'normal' ? 'Normal' : 'Schwer';
+  }
+  function openBookUpperChapter(q) {
+    const src = String(q.source || '');
+    const m = src.match(/(?:Kapitel|Abschnitt)\s+([0-9]+(?:\.[0-9]+)?)/i);
+    if (m) return `Oberkapitel ${m[1].split('.')[0]}`;
+    return src.split(',')[0] || 'Themengebiet des Dokuments';
+  }
+  function openBookHelpText(q, level) {
+    if (level === 'hard') return 'Im Schwierigkeitsgrad „Schwer“ ist keine Recherchehilfe vorgesehen.';
+    if (level === 'normal') return `Suche im ${openBookUpperChapter(q)}. Die genaue Unterstelle musst du selbst bestimmen.`;
+    return `Gezielte Orientierung: ${q.source}. Achte auf die dort vollständig aufgeführten Anforderungen und Bedingungen.`;
+  }
   function renderOpenBookHome() {
-    const cards = Object.entries(OPEN_BOOK_MODULES).map(([id,m]) => {
-      const done=m.questions.filter(q=>openBookQuestionStats(q.id).correct>0).length;
-      return `<article class="openbook-module-card"><div class="eyebrow">Open-Book-Training</div><h2>${esc(m.title)}</h2><p>${esc(m.short)}</p><div class="path-progress"><span style="width:${done/m.questions.length*100}%"></span></div><div class="path-meta"><span>${done}/${m.questions.length} mindestens einmal gelöst</span></div><button class="primary-btn" data-action="start-openbook" data-source="${id}">${done?'Weiterlernen':'Lernmodul starten'}</button></article>`;
-    }).join('');
-    app.innerHTML=layout(`<section class="openbook-hero"><div class="eyebrow">Mit den Originalunterlagen arbeiten</div><h1>Dokumenten-Lernmodule</h1><p class="lead">Die Aufgaben sind bewusst zu komplex für reines Auswendigwissen. Öffne deine Unterlagen extern, recherchiere die korrekte Formulierung und gib sie anschließend frei ein.</p><div class="verified-only-note"><strong>Verbindliche Lernregel:</strong> Bei einer falschen Eingabe wird keine Musterlösung eingeblendet. Du erhältst ausschließlich die verifizierte Fundstelle und suchst dort erneut nach.</div></section><section class="openbook-grid">${cards}</section>`);
+    state.view = 'home';
+    render();
   }
   function renderOpenBookQuestion() {
-    const module=OPEN_BOOK_MODULES[state.openBookSource], q=currentOpenBookQuestion();
-    if(!module||!q){state.view='openBookHome';render();return;}
-    const stats=openBookQuestionStats(q.id), n=state.openBookIndex+1;
-    app.innerHTML=layout(`<section class="openbook-session"><div class="eyebrow">${esc(module.title)} · Aufgabe ${n} von ${module.questions.length}</div><h1>${esc(q.prompt)}</h1><div class="openbook-instruction"><strong>Arbeitsauftrag</strong><p>Schlage die Antwort jetzt in deinen externen Unterlagen nach. Formuliere die Antwort anschließend möglichst vollständig in eigenen Worten.</p></div><form id="openBookForm"><label for="openBookAnswer">Deine recherchierte Antwort</label><textarea id="openBookAnswer" rows="8" required autocomplete="off" placeholder="Antwort nach dem Nachschlagen hier eingeben …"></textarea><div class="actions"><button class="primary-btn" type="submit">Antwort prüfen</button><button class="ghost-btn" type="button" data-action="openbook-home">Lernmodul verlassen</button></div></form>${state.openBookFeedback?`<div class="openbook-feedback ${state.openBookFeedback.correct?'correct':'wrong'}"><strong>${state.openBookFeedback.correct?'Inhaltliche Kernelemente erkannt.':'Noch nicht ausreichend belegt.'}</strong><p>${state.openBookFeedback.correct?'Du hast genügend zentrale Begriffe aus der verifizierten Fundstelle erfasst.':'Bitte schlage erneut in der folgenden Fundstelle nach. Eine vollständige Lösung wird bewusst nicht angezeigt.'}</p>${state.openBookFeedback.correct?'':`<div class="source-only">Fundstelle: ${esc(q.source)}</div>`}</div>`:''}<div class="path-meta"><span>Bisherige Versuche: ${stats.attempts}</span><span>Erfolgreich: ${stats.correct}</span></div>${state.openBookFeedback?.correct?`<div class="actions"><button class="primary-btn" data-action="next-openbook">Nächste Aufgabe</button></div>`:''}</section>`);
+    state.view = 'home';
+    render();
   }
   function checkOpenBookAnswer(value) {
     const q=currentOpenBookQuestion(); if(!q)return;
     const text=normalizeOpenBookAnswer(value);
     const matched=q.hints.filter(h=>text.includes(normalizeOpenBookAnswer(h))).length;
+    const total=q.hints.length;
+    const ratio=total?matched/total:0;
     const correct=matched>=q.min;
     const old=openBookQuestionStats(q.id);
-    store.openBookProgress[q.id]={attempts:(old.attempts||0)+1,correct:(old.correct||0)+(correct?1:0),lastAt:new Date().toISOString(),source:state.openBookSource};
-    store.openBookHistory.unshift({id:q.id,source:state.openBookSource,correct,date:new Date().toISOString(),seconds:state.openBookStartedAt?Math.round((Date.now()-state.openBookStartedAt)/1000):0});
+    store.openBookSavedAnswers[q.id]=value;
+    store.openBookProgress[q.id]={attempts:(old.attempts||0)+1,correct:(old.correct||0)+(correct?1:0),lastAt:new Date().toISOString(),source:state.openBookSource,bestRatio:Math.max(old.bestRatio||0,ratio),difficulty:state.openBookDifficulty};
+    store.openBookHistory.unshift({id:q.id,source:state.openBookSource,correct,matched,total,ratio,difficulty:state.openBookDifficulty,helpUsed:store.openBookHelpUsage?.[q.id]||0,date:new Date().toISOString(),seconds:state.openBookStartedAt?Math.round((Date.now()-state.openBookStartedAt)/1000):0});
     store.openBookHistory=store.openBookHistory.slice(0,500); saveStore();
-    state.openBookFeedback={correct,matched}; render();
+    state.openBookFeedback={correct,matched,total,ratio}; render();
   }
 
-  const LEARNING_PATH_MODULES = [
-    {id:'grundlagen', order:1, title:'Qualität verstehen', short:'Grundbegriffe, Nutzen und Denkweise des Qualitätsmanagements', icon:'01', keywords:['qualität','qualitätsmanagement','qms','anforderung','inhärent'], iso:'ISO 9000 / ISO 9001 – Grundlagen und Begriffe', m1:'Modul 1 – Grundlagen des Qualitätsmanagements', m2:'Modul 2 – Wiederholung und Anwendung', goal:'Du kannst Qualität und Qualitätsmanagement verständlich erklären und voneinander abgrenzen.', impulse:'Wo begegnet dir Qualität im Alltag – und woran erkennst du sie wirklich?'},
-    {id:'prozess', order:2, title:'Prozesse & PDCA', short:'Prozessorientierung, Wechselwirkungen, Kennzahlen und PDCA', icon:'02', keywords:['prozess','pdca','wechselwirkung','kennzahl','prozessleistung'], iso:'ISO 9001 Kapitel 4.4 und 10', m1:'Modul 1 – Prozessorientierter Ansatz', m2:'Modul 2 – Prozessbewertung und Verbesserung', goal:'Du erkennst Prozesse, ihre Wechselwirkungen und kannst den PDCA-Zyklus praktisch anwenden.', impulse:'Was wäre in einem Betrieb anders, wenn niemand nur seine Abteilung, sondern alle den Gesamtprozess sähen?'},
-    {id:'kontext', order:3, title:'Kontext & Stakeholder', short:'Organisation, interessierte Parteien und Anwendungsbereich', icon:'03', keywords:['kontext','interessierte partei','stakeholder','anwendungsbereich','interne themen','externe themen'], iso:'ISO 9001 Kapitel 4', m1:'Modul 1 – Kontext der Organisation', m2:'Modul 2 – Umsetzung im Managementsystem', goal:'Du kannst relevante interne und externe Themen sowie interessierte Parteien bestimmen.', impulse:'Wer beeinflusst die Qualität deiner Organisation, obwohl diese Person nicht im Organigramm steht?'},
-    {id:'fuehrung', order:4, title:'Führung & Qualitätspolitik', short:'Verantwortung der Leitung, Rollen, Politik und Kundenorientierung', icon:'04', keywords:['oberste leitung','führung','qualitätspolitik','kundenorientierung','verantwortung','befugnis'], iso:'ISO 9001 Kapitel 5', m1:'Modul 1 – Führung', m2:'Modul 2 – Führungsverhalten und Wirksamkeit', goal:'Du verstehst, welche Verantwortung nicht delegiert werden kann und wie Politik Orientierung schafft.', impulse:'Woran merken Mitarbeitende im Alltag, dass Qualität von der Leitung wirklich gewollt ist?'},
-    {id:'planung', order:5, title:'Risiken, Chancen & Ziele', short:'Risikobasiertes Denken, Qualitätsziele und Änderungsplanung', icon:'05', keywords:['risiko','chance','qualitätsziel','planung','änderung','maßnahmen'], iso:'ISO 9001 Kapitel 6', m1:'Modul 1 – Planung des QMS', m2:'Modul 2 – Methoden, Bewertung und Umsetzung', goal:'Du kannst Risiken und Chancen sinnvoll behandeln und messbare Qualitätsziele formulieren.', impulse:'Welche Entscheidung wäre anders, wenn du nicht nur fragst „Was kann schiefgehen?“, sondern auch „Was kann besser werden?“'},
-    {id:'unterstuetzung', order:6, title:'Ressourcen & dokumentierte Information', short:'Kompetenz, Bewusstsein, Kommunikation, Wissen und Dokumentenlenkung', icon:'06', keywords:['ressource','kompetenz','bewusstsein','kommunikation','dokumentiert','dokument','wissen','infrastruktur','messmittel'], iso:'ISO 9001 Kapitel 7', m1:'Modul 1 – Unterstützung', m2:'Modul 2 – Dokumentation und praktische Lenkung', goal:'Du weißt, welche Unterstützung ein wirksames QMS braucht und wie Information beherrscht wird.', impulse:'Wann hilft ein Dokument – und wann wird es nur Papier, das niemand wirklich nutzt?'},
-    {id:'betrieb', order:7, title:'Betriebliche Umsetzung', short:'Anforderungen, Entwicklung, Beschaffung, Produktion und Freigabe', icon:'07', keywords:['betrieb','produkt','dienstleistung','entwicklung','lieferant','beschaffung','freigabe','rückverfolgbarkeit','eigentum','produktion'], iso:'ISO 9001 Kapitel 8', m1:'Modul 1 – Betrieb', m2:'Modul 2 – Vertiefung der betrieblichen Prozesse', goal:'Du kannst Anforderungen vom Kunden bis zur Freigabe und Nachverfolgung sicher einordnen.', impulse:'An welcher Stelle im Ablauf entscheidet sich am frühesten, ob am Ende gute Qualität entstehen kann?'},
-    {id:'bewertung', order:8, title:'Bewertung & Audit', short:'Überwachung, Kundenzufriedenheit, Analyse, internes Audit und Managementbewertung', icon:'08', keywords:['audit','überwachung','messung','kundenzufriedenheit','analyse','bewertung','managementbewertung'], iso:'ISO 9001 Kapitel 9', m1:'Modul 1 – Bewertung der Leistung', m2:'Modul 2 – Audit und Managementbewertung', goal:'Du kannst aus Daten und Auditergebnissen fundierte Aussagen zur Wirksamkeit treffen.', impulse:'Welche Information würdest du der Leitung zeigen, wenn du nur eine Kennzahl auswählen dürftest?'},
-    {id:'verbesserung', order:9, title:'Abweichung & Verbesserung', short:'Nichtkonformität, Korrekturmaßnahmen, Ursachen und fortlaufende Verbesserung', icon:'09', keywords:['nichtkonform','korrektur','verbesserung','ursache','abweichung','fehler'], iso:'ISO 9001 Kapitel 10', m1:'Modul 1 – Verbesserung', m2:'Modul 2 – Problemlösung und nachhaltige Maßnahmen', goal:'Du unterscheidest Korrektur, Korrekturmaßnahme und Verbesserung und denkst konsequent in Ursachen.', impulse:'Warum kommt derselbe Fehler zurück, obwohl er jedes Mal sofort beseitigt wurde?'},
-    {id:'praxis', order:10, title:'Praxis, Projekt & Prüfungstransfer', short:'Auditfälle, Projekte, Motivation und vernetztes Prüfungswissen', icon:'10', keywords:['projekt','motivation','systemaudit','zertifizierung','prüf','management'], iso:'ISO 9001 – vernetzter Gesamtüberblick', m1:'Modul 1 – Zusammenführung', m2:'Modul 2 – Projekte, Audits und Transfer', goal:'Du verknüpfst Wissen aus allen Bereichen und wendest es in neuen Situationen an.', impulse:'Kannst du eine richtige Lösung auch dann begründen, wenn keine Antwortmöglichkeit vorgegeben ist?'}
-  ];
+  const LEARNING_PATH_MODULES = [{"id":"kapitel-1","order":1,"title":"Warenbeschaffung und Sortimentspolitik","short":"Du beginnst im Markt und gestaltest ein Sortiment, das wirklich zum Kundenbedarf passt.","icon":"01","categoryId":"kapitel-1","goal":"Sortiment, Beschaffung, Bedienungsformen und Kundenbedarf sicher unterscheiden.","station":"Erster Rundgang durch Verkaufsraum und Lager","people":"Marktleiterin Mara Stein und Einkäufer Ben Hoffmann","arc":"Am ersten Arbeitstag erkennst du, dass ein volles Regal noch kein gutes Sortiment ist.","milestone":"Du erhältst Verantwortung für die erste Sortimentsentscheidung.","anchor":"Ein langes Regal mit einer auffälligen Lücke beim meistgesuchten Artikel."},{"id":"kapitel-2","order":2,"title":"Warenbestandssteuerung und Inventur","short":"Du vergleichst Soll- und Istbestände und suchst die Ursachen für Abweichungen.","icon":"02","categoryId":"kapitel-2","goal":"Bestände, Inventur, Differenzen sowie Unter- und Überbestände beurteilen.","station":"Frühmorgendliche Bestandsaufnahme","people":"Mara Stein und Lagerkollege Emir Kaya","arc":"Eine Bestandsliste passt nicht zum Regal. Du musst herausfinden, wo die Ware geblieben ist.","milestone":"Du leitest deine erste kontrollierte Bestandsprüfung.","anchor":"Zählliste in der Hand, leeres Fach im Regal und eine ungeklärte Differenz."},{"id":"kapitel-3","order":3,"title":"Warenbestandsveränderungen","short":"Du verfolgst jede Warenbewegung vom Eingang bis zum Verkauf, Schwund oder Verderb.","icon":"03","categoryId":"kapitel-3","goal":"Bestandsmehrungen, Bestandsminderungen und ihre Ursachen richtig zuordnen.","station":"Wareneingang, Verkaufsfläche und Abschriftenplatz","people":"Emir Kaya und Verkäuferin Sophie Neumann","arc":"Eine Lieferung kommt an, Ware wird verkauft und beschädigte Artikel müssen ausgebucht werden.","milestone":"Du kannst den Weg einer Ware vollständig nachvollziehen.","anchor":"Eine Kiste kommt hinein, ein Einkaufswagen fährt hinaus, beschädigte Ware liegt daneben."},{"id":"kapitel-4","order":4,"title":"Warenwirtschaftliche Prozesse und Buchführung","short":"Du verbindest Ware, Beleg, Rechnung und Buchung zu einem nachvollziehbaren Ablauf.","icon":"04","categoryId":"kapitel-4","goal":"Warenwirtschaftliche Abläufe und grundlegende Buchführungszusammenhänge verstehen.","station":"Büro hinter dem Verkaufsraum","people":"Mara Stein und Buchhalterin Jana Wolf","arc":"Eine Lieferung ist angekommen, doch ein Beleg fehlt. Du musst den Vorgang sauber rekonstruieren.","milestone":"Du stellst den ersten lückenlosen Waren- und Belegfluss her.","anchor":"Ware, Lieferschein, Rechnung und Kassenbon bilden eine geschlossene Kette."},{"id":"kapitel-5","order":5,"title":"Kosten- und Leistungsrechnung","short":"Du lernst, warum hoher Umsatz ohne Kostenkontrolle noch keinen Erfolg bedeutet.","icon":"05","categoryId":"kapitel-5","goal":"Kosten, Leistungen, Kostenarten und betriebliche Zusammenhänge sicher unterscheiden.","station":"Monatsauswertung im Marktleiterbüro","people":"Mara Stein und Controller Tobias Kern","arc":"Die Kasse war voll, trotzdem ist das Ergebnis schwächer als erwartet. Du suchst die Kostentreiber.","milestone":"Du präsentierst deine erste einfache Kostenanalyse.","anchor":"Eine volle Kasse steht vor einem Schatten aus Miete, Personal und Energie."},{"id":"kapitel-6","order":6,"title":"Deckungsbeitragsrechnung","short":"Du vergleichst Artikel nicht nur nach Absatz, sondern nach ihrem Beitrag zum Betriebserfolg.","icon":"06","categoryId":"kapitel-6","goal":"Deckungsbeiträge berechnen und für Sortimentsentscheidungen nutzen.","station":"Sortimentsbesprechung mit Verkaufszahlen","people":"Tobias Kern und Einkäufer Ben Hoffmann","arc":"Zwei Produkte verkaufen sich gut, aber nur eines trägt wirklich stark zur Deckung der Fixkosten bei.","milestone":"Du begründest eine Sortimentsentscheidung mit dem Deckungsbeitrag.","anchor":"Zwei Preisschilder, zwei Kostenstapel – übrig bleibt jeweils ein unterschiedlich großer Beitrag."},{"id":"kapitel-7","order":7,"title":"Kurzfristige Erfolgsrechnung und Lagerkennzahlen","short":"Du erkennst, welche Ware Kapital bindet und welche sich schnell und erfolgreich dreht.","icon":"07","categoryId":"kapitel-7","goal":"Kurzfristigen Erfolg, Lagerumschlag und Lagerdauer richtig beurteilen.","station":"Lageranalyse nach Quartalsende","people":"Emir Kaya und Tobias Kern","arc":"Einige Artikel laufen schnell, andere stehen wochenlang. Du untersuchst die Folgen für Ergebnis und Kapital.","milestone":"Du entwickelst einen Plan für langsame Lagerbestände.","anchor":"Ein schnell drehendes Regalrad neben einem staubigen Kartonstapel."},{"id":"kapitel-8","order":8,"title":"Wirtschaftlichkeit, Rentabilität und Produktivität","short":"Du setzt Ergebnis, Einsatz und Kapital ins richtige Verhältnis.","icon":"08","categoryId":"kapitel-8","goal":"Wirtschaftlichkeit, Rentabilität und Produktivität unterscheiden und berechnen.","station":"Vergleich zweier Marktbereiche","people":"Mara Stein und Tobias Kern","arc":"Zwei Teams arbeiten gleich lang, erzielen aber unterschiedliche Ergebnisse. Du klärst, welche Kennzahl was aussagt.","milestone":"Du bewertest Leistung nicht mehr nur nach Umsatz.","anchor":"Zwei gleich große Sanduhren, aber unterschiedlich volle Ergebniskörbe."},{"id":"kapitel-9","order":9,"title":"Limitrechnung im Einkauf","short":"Du rechnest vom geplanten Verkaufspreis zurück und bestimmst die tragbare Einkaufsgrenze.","icon":"09","categoryId":"kapitel-9","goal":"Einkaufslimits und Rückwärtskalkulation sicher anwenden.","station":"Preisverhandlung mit einem Lieferanten","people":"Ben Hoffmann und Lieferantin Frau Adler","arc":"Ein neues Produkt ist attraktiv, aber der Einkaufspreis darf die Kalkulationsgrenze nicht überschreiten.","milestone":"Du setzt erstmals ein begründetes Einkaufslimit.","anchor":"Auf dem Einkaufszettel verläuft eine rote Linie: Bis hierhin – nicht darüber."},{"id":"kapitel-10","order":10,"title":"Finanzierung","short":"Du planst, wie notwendige Investitionen bezahlt werden, ohne die Zahlungsfähigkeit zu gefährden.","icon":"10","categoryId":"kapitel-10","goal":"Finanzierungsarten, Kapitalbedarf und Liquidität beurteilen.","station":"Planung einer neuen Kühlanlage","people":"Mara Stein und Bankberaterin Frau Reuter","arc":"Die alte Kühlung muss ersetzt werden. Du vergleichst Eigenmittel, Kredit und weitere Finanzierungswege.","milestone":"Du legst einen tragfähigen Finanzierungsvorschlag vor.","anchor":"Eine neue Kühltheke steht zwischen Sparschwein und Kreditvertrag."},{"id":"kapitel-11","order":11,"title":"Umsatzsteuer und Vorsteuer","short":"Du trennst sauber, was der Markt beim Verkauf einnimmt und beim Einkauf abziehen kann.","icon":"11","categoryId":"kapitel-11","goal":"Umsatzsteuer, Vorsteuer und Zahllast korrekt einordnen und berechnen.","station":"Rechnungsprüfung im Büro","people":"Jana Wolf und Tobias Kern","arc":"Einkaufs- und Verkaufsrechnungen liegen nebeneinander. Du musst die steuerlichen Seiten richtig zuordnen.","milestone":"Du erklärst die Umsatzsteuerkette verständlich.","anchor":"Zwei Rechnungen zeigen in entgegengesetzte Richtungen: Einkauf und Verkauf."},{"id":"kapitel-12","order":12,"title":"Anlagegüter und Anschaffungskosten","short":"Du unterscheidest kurzfristige Ware von langfristig genutzten Betriebsmitteln.","icon":"12","categoryId":"kapitel-12","goal":"Anlagegüter und Anschaffungskosten vollständig und korrekt erfassen.","station":"Umbau des Kassenbereichs","people":"Mara Stein und Techniker David Scholz","arc":"Neue Kassen und Regale werden geliefert. Du klärst, welche Kosten zum Anlagegut gehören.","milestone":"Du stellst die vollständigen Anschaffungskosten zusammen.","anchor":"Ein Joghurt verlässt den Markt schnell, eine Kasse bleibt jahrelang stehen."},{"id":"kapitel-13","order":13,"title":"Handelsrecht und Unternehmensformen","short":"Du schaust hinter den Markt und verstehst Kaufmannseigenschaft, Firma und Rechtsform.","icon":"13","categoryId":"kapitel-13","goal":"Handelsrechtliche Grundlagen und Unternehmensformen sicher unterscheiden.","station":"Gespräch mit der Geschäftsführung","people":"Geschäftsführer Daniel Krüger und Mara Stein","arc":"Der Markt soll erweitert werden. Du prüfst, welche rechtlichen Strukturen und Folgen zu beachten sind.","milestone":"Du kannst die passende Unternehmensform sachlich vergleichen.","anchor":"Ein Ladenschild steht vor mehreren Türen mit unterschiedlichen Rechtsformen."},{"id":"kapitel-14","order":14,"title":"Vollmachten und Vertretung","short":"Du erkennst, wer welche Entscheidungen treffen, Bestellungen auslösen oder Verträge schließen darf.","icon":"14","categoryId":"kapitel-14","goal":"Vollmachten und Vertretungsbefugnisse korrekt abgrenzen.","station":"Vertretung der Marktleitung während einer Abwesenheit","people":"Mara Stein, Daniel Krüger und du als Schichtverantwortlicher","arc":"Mara ist nicht im Haus. Mehrere Entscheidungen warten, aber nicht jede darfst du allein treffen.","milestone":"Du handelst erstmals sicher innerhalb deiner Befugnisse.","anchor":"Ein Schlüsselbund trägt unterschiedlich große Schlüssel für unterschiedlich große Befugnisse."},{"id":"kapitel-15","order":15,"title":"Kundenberatung und Verkaufspsychologie","short":"Du lernst, Bedarf zu erkennen und Kunden ohne Druck zur passenden Lösung zu führen.","icon":"15","categoryId":"kapitel-15","goal":"Beratungsphasen, Bedarfsermittlung und Verkaufspsychologie anwenden.","station":"Beratung auf der Verkaufsfläche","people":"Verkäuferin Sophie Neumann und verschiedene Kundinnen und Kunden","arc":"Ein Kunde steht unsicher vor dem Regal. Du musst fragen, zuhören und passend empfehlen.","milestone":"Du führst ein vollständiges Beratungsgespräch selbstständig.","anchor":"Zwischen Kunde und Regal entsteht eine klare Brücke aus Fragen und Zuhören."},{"id":"kapitel-16","order":16,"title":"Kundenbeschwerden, Umtausch und Reklamation","short":"Du löst schwierige Kundensituationen ruhig, rechtlich sauber und serviceorientiert.","icon":"16","categoryId":"kapitel-16","goal":"Beschwerde, Reklamation, Gewährleistung, Umtausch und Kulanz unterscheiden.","station":"Servicepunkt an einem vollen Samstagnachmittag","people":"Sophie Neumann, Mara Stein und ein verärgerter Kunde","arc":"Ein Kunde verlangt sofort Geld zurück. Du klärst Anspruch, Ursache und angemessene Lösung.","milestone":"Du verwandelst eine Beschwerde in eine professionelle Lösung.","anchor":"Ein rotes Ausrufezeichen wird durch ruhiges Zuhören zu einem grünen Haken."},{"id":"kapitel-17","order":17,"title":"Zahlungsarten","short":"Du verstehst, wie unterschiedliche Zahlungswege funktionieren und welche Risiken sie tragen.","icon":"17","categoryId":"kapitel-17","goal":"Bar-, Karten-, Rechnungs- und digitale Zahlungen sicher beurteilen.","station":"Kassenbereich und Tagesabschluss","people":"Kassiererin Leonie Brandt und Jana Wolf","arc":"Mehrere Zahlungen laufen gleichzeitig. Du ordnest Verfahren, Belege, Risiken und Sicherheit richtig zu.","milestone":"Du führst einen fehlerfreien Tagesabschluss durch.","anchor":"Münzen, Karte, Smartphone und Rechnung treffen sich an einer Kasse."},{"id":"kapitel-18","order":18,"title":"Marketing und Marketingmix","short":"Du planst ein Angebot nicht nur als Werbung, sondern über Produkt, Preis, Kommunikation und Vertrieb.","icon":"18","categoryId":"kapitel-18","goal":"Marketingmix und Marketinginstrumente praxisnah anwenden.","station":"Planung einer regionalen Aktionswoche","people":"Marketingleiterin Nele Fischer und Mara Stein","arc":"Ein regionales Produkt soll bekannter werden. Du entwickelst den vollständigen Marketingmix.","milestone":"Du verantwortest deine erste kleine Marketingaktion.","anchor":"Vier Zahnräder greifen ineinander: Produkt, Preis, Kommunikation und Vertrieb."},{"id":"kapitel-19","order":19,"title":"Marketingstrategien und Nachhaltigkeit","short":"Du verbindest Positionierung, langfristige Kundenwirkung und glaubwürdige Nachhaltigkeit.","icon":"19","categoryId":"kapitel-19","goal":"Marketingstrategien und Nachhaltigkeitsmaßnahmen kritisch beurteilen.","station":"Strategierunde zur Zukunft des Marktes","people":"Nele Fischer, Daniel Krüger und ein regionaler Lieferant","arc":"Der Markt will nachhaltiger auftreten, darf aber keine leeren Versprechen machen.","milestone":"Du entwickelst eine glaubwürdige, langfristige Positionierung.","anchor":"Ein grünes Versprechen steht auf einem Fundament aus überprüfbaren Maßnahmen."},{"id":"kapitel-20","order":20,"title":"Marktforschung","short":"Du ersetzt Vermutungen durch Daten, Beobachtungen und systematische Befragungen.","icon":"20","categoryId":"kapitel-20","goal":"Methoden und Abläufe der Marktforschung richtig auswählen und auswerten.","station":"Untersuchung sinkender Kundenfrequenz","people":"Nele Fischer und ein kleines Befragungsteam","arc":"Weniger Kunden kommen am Nachmittag. Du untersuchst Ursachen statt vorschnell zu handeln.","milestone":"Du legst eine datengestützte Handlungsempfehlung vor.","anchor":"Eine Lupe liegt über Kundenwegen, Zahlen und Antworten."},{"id":"kapitel-21","order":21,"title":"Kundenbindung, Öffentlichkeitsarbeit und Standortmarketing","short":"Du machst den Markt zu einem verlässlichen Teil seines Umfelds und stärkst langfristige Beziehungen.","icon":"21","categoryId":"kapitel-21","goal":"Kundenbindung, Öffentlichkeitsarbeit und Standortmaßnahmen planen.","station":"Vorbereitung eines Stadtteilfests","people":"Nele Fischer, Stammkundin Frau Berger und örtliche Partner","arc":"Der Markt möchte nicht nur verkaufen, sondern im Stadtteil sichtbar und vertrauenswürdig bleiben.","milestone":"Du entwickelst ein vollständiges lokales Bindungskonzept.","anchor":"Viele Wege aus dem Stadtteil führen zu einem Markt mit offenen Türen."},{"id":"kapitel-22","order":22,"title":"Onlinehandel und Multi-Channel","short":"Du verbindest Laden, Website, Smartphone und Abholung zu einem einheitlichen Kundenerlebnis.","icon":"22","categoryId":"kapitel-22","goal":"Onlinehandel und Multi-Channel-Prozesse sicher beurteilen.","station":"Einführung eines Bestell- und Abholservices","people":"IT-Koordinatorin Kim Lorenz, Sophie Neumann und Mara Stein","arc":"Kunden wollen online bestellen und im Markt abholen. Du verbindest die Kanäle ohne Informationsbruch.","milestone":"Du begleitest den ersten erfolgreichen Multi-Channel-Auftrag.","anchor":"Smartphone, Lager und Ladentheke sind durch eine durchgehende Linie verbunden."},{"id":"kapitel-23","order":23,"title":"Unternehmensgründung und Businessplan","short":"Du bündelst alles Gelernte und planst einen eigenen kleinen Handelsbetrieb.","icon":"23","categoryId":"kapitel-23","goal":"Geschäftsidee, Markt, Kapital, Rentabilität, Liquidität und Businessplan zusammenführen.","station":"Abschlussprojekt: dein eigenes Marktkonzept","people":"Mara Stein, Daniel Krüger und du als angehender Unternehmer","arc":"Aus dem neuen Verkäufer ist ein unternehmerisch denkender Profi geworden. Nun entsteht dein eigener Plan.","milestone":"Du präsentierst einen tragfähigen Businessplan und schließt die Lernreise ab.","anchor":"Vom ersten Regal führt ein Weg bis zum eigenen Ladenschild."}];
 
   function questionsForLearningModule(module) {
-    const keys = module.keywords.map(k => k.toLowerCase());
-    const hits = getAllQuestions().filter(q => {
-      const text = `${q.question} ${(q.answers||[]).map(a=>a.text).join(' ')} ${q.questionComment||''}`.toLowerCase();
-      return keys.some(k => text.includes(k));
-    });
-    return hits.length >= 8 ? hits : getAllQuestions().filter((_,i) => i % LEARNING_PATH_MODULES.length === module.order - 1);
+    return getAllQuestions().filter(question => question.categoryId === module.categoryId);
   }
 
   function moduleStats(module) {
@@ -155,19 +127,62 @@
     const correct = logs.filter(a=>a.correct).length;
     const accuracy = logs.length ? Math.round(correct/logs.length*100) : 0;
     const progress = store.learningPathProgress?.[module.id] || {};
-    return {attempts:logs.length, correct, accuracy, completed:!!progress.completed, started:!!progress.startedAt};
+    let stage = 'Noch nicht begonnen';
+    if (logs.length >= 50 && accuracy >= 85) stage = 'Sehr sicher geübt';
+    else if (logs.length >= 30 && accuracy >= 75) stage = 'Stabil im Aufbau';
+    else if (logs.length >= 10) stage = 'Im Aufbau';
+    else if (logs.length || progress.startedAt) stage = 'Begonnen';
+    return {attempts:logs.length, correct, accuracy, stage, started:!!progress.startedAt || logs.length > 0};
   }
 
   function learningCoachMessage(session) {
     if (!session || session.mode !== 'path') return '';
-    const remaining = Math.max(0, session.questions.length - session.index - 1);
-    const answered = Object.keys(session.checked||{}).length;
-    const wrong = Number(session.wrongInSession||0);
-    if (remaining === 0) return 'Das ist die letzte Aufgabe dieses Abschnitts. Nimm dir noch einmal Zeit für die Begründung – dann ist dieser Schritt geschafft.';
-    if (remaining <= 3) return `Noch ${remaining} ${remaining === 1 ? 'Aufgabe' : 'Aufgaben'} – dann hast du diesen Lernabschnitt geschafft. Dein bisheriger Weg zählt.`;
-    if (answered >= 4 && wrong >= Math.ceil(answered*.5)) return 'Dieser Abschnitt fordert dich gerade. Das ist kein Rückschritt: Genau hier entsteht Lernen. Schau auf den Zusammenhang, nicht auf die Antwortposition.';
-    if (answered >= 5 && Number(session.correctInSession||0) / answered >= .8) return 'Du erkennst die Zusammenhänge inzwischen sicher. Bleib aufmerksam und begründe die Lösung weiterhin für dich selbst.';
-    return 'Lies bewusst, bilde zuerst eine eigene Antwort und prüfe erst danach die Auswahlmöglichkeiten.';
+    const answered = Number(session.pathAnsweredTotal || 0);
+    const wrong = Number(session.wrongInSession || 0);
+    const untilBreak = Math.max(0, Number(session.breakNextAtInSession || 50) - Number(session.breakAnsweredInSession || 0));
+    if (session.breakGameEnabled && untilBreak > 0 && untilBreak <= 3) return `Noch ${untilBreak} ${untilBreak === 1 ? 'Frage' : 'Fragen'} bis zur Erholungspause. Danach wird die Verkäufer-Lernreise an derselben Szene fortgesetzt.`;
+    if (answered >= 4 && wrong >= Math.ceil(answered * .5)) return 'Die Etappe fordert dich gerade. Nutze die Szene nach der Antwort, um den Zusammenhang zu verstehen – nicht die Position der Lösung.';
+    if (answered >= 5 && Number(session.correctInSession || 0) / answered >= .8) return 'Du handelst zunehmend sicher. Begründe die Entscheidung weiter wie ein verantwortlicher Verkäufer und nicht nur aus dem Gedächtnis.';
+    return 'Zuerst entscheidest du selbst. Danach wird die fortlaufende Geschichte vom ersten Arbeitstag bis zum eigenen Marktkonzept weitererzählt.';
+  }
+
+  const CARAT_AUDIT_CHAPTERS = [];
+
+  function questionsForAuditChapter(chapter) {
+    return getAllQuestions().filter(q => Number(q.caratChapter) === Number(chapter.number));
+  }
+
+  function auditChapterStats(chapter) {
+    const ids = new Set(questionsForAuditChapter(chapter).map(q => q.uid));
+    const logs = (store.attemptLog || []).filter(a => ids.has(a.uid));
+    const correct = logs.filter(a => a.correct).length;
+    const accuracy = logs.length ? Math.round(correct / logs.length * 100) : 0;
+    const progress = store.auditJourneyProgress?.[chapter.id] || {};
+    return {attempts: logs.length, correct, accuracy, started: Boolean(progress.startedAt || logs.length), completed: Boolean(progress.completed)};
+  }
+
+  function auditCoachMessage(session) {
+    const answered = Number(session.auditAnsweredTotal || 0);
+    const untilBreak = Math.max(0, Number(session.breakNextAtInSession || 50) - Number(session.breakAnsweredInSession || 0));
+    if (session.breakGameEnabled && untilBreak > 0 && untilBreak <= 3) return `Noch ${untilBreak} ${untilBreak === 1 ? 'Frage' : 'Fragen'} bis zur Erholungspause. Die Auditreise wird danach genau hier fortgesetzt.`;
+    if (!answered) return 'Versuche zuerst die neutrale Originalfrage. Die CARAT-Hilfe übersetzt sie bei Bedarf in eine beobachtbare Auditsituation, ohne die Lösung zu nennen.';
+    return 'Nach jeder Antwort wird die zusammenhängende CARAT-Geschichte fortgesetzt. Beobachtung, Bewertung und fachliche Quelle bleiben getrennt.';
+  }
+
+  function renderAuditJourney() {
+    state.view = 'learningPath';
+    render();
+  }
+
+  function activeSessionPositionText(session) {
+    if (!session) return '';
+    if (session.mode === 'path') {
+      return `Verkäufer-Lernreise · <strong>${Number(session.pathAnsweredTotal || 0)}</strong> Szenen beantwortet · Geschichte, Antwortmischung und genauer Stand sind gespeichert.`;
+    }
+    if (session.mode === 'audit') {
+      return `CARAT-Auditreise · Kapitel <strong>${session.auditChapterNumber || session.questions?.[0]?.caratChapter || '–'}</strong> · Frage <strong>${Math.min((session.index || 0) + 1, session.questions?.length || 0)}</strong> von <strong>${session.questions?.length || 0}</strong>. Geschichte, Hilfe und Antwortreihenfolge sind gespeichert.`;
+    }
+    return `Du warst bei Frage <strong>${Math.min((session.index || 0) + 1, session.questions?.length || 0)}</strong> von <strong>${session.questions?.length || 0}</strong>. Antworten, Reihenfolge und Zeitstand sind gespeichert.`;
   }
 
   function saveActiveSession() {
@@ -180,16 +195,52 @@
   }
 
   function restoreActiveSession() {
-    if (!store.activeSession) return false;
-    state.session = JSON.parse(JSON.stringify(store.activeSession));
-    if (!state.session.currentQuestionStartedAt) state.session.currentQuestionStartedAt = Date.now();
+    const saved = store.activeSession;
+    if (!saved || !Array.isArray(saved.questions) || !saved.questions.length) return false;
+    const restored = JSON.parse(JSON.stringify(saved));
+    restored.index = Math.max(0, Math.min(Number(restored.index || 0), restored.questions.length - 1));
+    restored.selections = restored.selections && typeof restored.selections === 'object' ? restored.selections : {};
+    restored.checked = restored.checked && typeof restored.checked === 'object' ? restored.checked : {};
+    restored.hints = restored.hints && typeof restored.hints === 'object' ? restored.hints : {};
+    restored.caratHelpShown = restored.caratHelpShown && typeof restored.caratHelpShown === 'object' ? restored.caratHelpShown : {};
+    restored.completedUids = Array.isArray(restored.completedUids) ? restored.completedUids : [];
+    restored.currentQuestionStartedAt = Date.now();
+    if (!Number.isFinite(Number(restored.breakAnsweredInSession))) restored.breakAnsweredInSession = restored.completedUids.length;
+    if (!Number.isFinite(Number(restored.breakNextAtInSession)) || Number(restored.breakNextAtInSession) < 50) {
+      restored.breakNextAtInSession = (Math.floor(Number(restored.breakAnsweredInSession || 0) / 50) + 1) * 50;
+    }
+    if (restored.mode === 'path') {
+      restored.pathAnsweredTotal = Number(restored.pathAnsweredTotal || Object.keys(restored.checked).length || 0);
+      restored.pathCycle = Number(restored.pathCycle || 1);
+    }
+    if (restored.mode === 'audit') {
+      restored.auditAnsweredTotal = Number(restored.auditAnsweredTotal || Object.keys(restored.checked).length || 0);
+      restored.auditChapterId = restored.auditChapterId || restored.questions?.[0]?.caratChapterId || null;
+    }
+    state.session = restored;
+    state.breakPrompt = null;
+    state.game = null;
+    state.pendingSession = null;
     state.view = 'session';
+    saveActiveSession();
     return true;
   }
 
   function clearActiveSession() {
     store.activeSession = null;
     saveStore();
+  }
+
+  function discardActiveSession() {
+    clearInterval(timerHandle);
+    if (globalThis.speechSynthesis) globalThis.speechSynthesis.cancel();
+    state.session = null;
+    state.breakPrompt = null;
+    state.game = null;
+    state.pendingSession = null;
+    store.activeSession = null;
+    saveStore();
+    state.view = 'home';
   }
 
   function loadStore() {
@@ -213,7 +264,11 @@
         learningPathProgress: parsed.learningPathProgress && typeof parsed.learningPathProgress === 'object' ? parsed.learningPathProgress : {},
         learningPathLastModule: parsed.learningPathLastModule || null,
         openBookProgress: parsed.openBookProgress && typeof parsed.openBookProgress === 'object' ? parsed.openBookProgress : {},
-        openBookHistory: Array.isArray(parsed.openBookHistory) ? parsed.openBookHistory : []
+        openBookHistory: Array.isArray(parsed.openBookHistory) ? parsed.openBookHistory : [],
+        pathHelpUsage: parsed.pathHelpUsage && typeof parsed.pathHelpUsage === 'object' ? parsed.pathHelpUsage : {},
+        auditJourneyProgress: parsed.auditJourneyProgress && typeof parsed.auditJourneyProgress === 'object' ? parsed.auditJourneyProgress : {},
+        auditJourneyLastChapter: parsed.auditJourneyLastChapter || null,
+        auditHelpUsage: parsed.auditHelpUsage && typeof parsed.auditHelpUsage === 'object' ? parsed.auditHelpUsage : {}
       };
     } catch {
       return {...defaultStore};
@@ -241,10 +296,21 @@
     }[char]));
   }
 
+  function randomIndex(maxExclusive) {
+    if (maxExclusive <= 1) return 0;
+    if (globalThis.crypto?.getRandomValues) {
+      const limit = Math.floor(0x100000000 / maxExclusive) * maxExclusive;
+      const value = new Uint32Array(1);
+      do globalThis.crypto.getRandomValues(value); while (value[0] >= limit);
+      return value[0] % maxExclusive;
+    }
+    return Math.floor(Math.random() * maxExclusive);
+  }
+
   function shuffle(arr) {
     const result = [...arr];
     for (let i = result.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = randomIndex(i + 1);
       [result[i], result[j]] = [result[j], result[i]];
     }
     return result;
@@ -282,8 +348,12 @@
     return question.answers.map((answer, index) => answer.correct ? index : -1).filter(index => index >= 0);
   }
 
-  function selectedFor(uid) {
-    return state.session?.selections?.[uid] || [];
+  function sessionQuestionKey(question) {
+    return question?.sessionUid || question?.uid || '';
+  }
+
+  function selectedForQuestion(question) {
+    return state.session?.selections?.[sessionQuestionKey(question)] || [];
   }
 
   function slugify(value) {
@@ -302,14 +372,15 @@
 
   function normalizeBaseQuestion(question) {
     const override = store.overrides?.[question.uid] || {};
-    const baseCategoryId = `test-${question.test}`;
+    const baseCategoryId = question.categoryId || `kapitel-${question.test}`;
+    const baseCategoryName = question.categoryName || question.testName || `Kapitel ${question.test}`;
     return {
       ...question,
       ...override,
       answers: Array.isArray(override.answers) ? override.answers : question.answers,
       categoryId: override.categoryId || baseCategoryId,
-      categoryName: override.categoryName || question.testName || `Test ${question.test}`,
-      testName: override.categoryName || question.testName || `Test ${question.test}`,
+      categoryName: override.categoryName || baseCategoryName,
+      testName: override.categoryName || baseCategoryName,
       origin: 'base',
       updatedAt: override.updatedAt || null
     };
@@ -360,22 +431,19 @@
 
   function getCategories() {
     const map = new Map();
-    for (let test = 1; test <= 12; test++) {
-      map.set(`test-${test}`, {id: `test-${test}`, name: `Test ${test}`, kind: 'base', order: test});
-    }
-    for (const category of store.customCategories || []) {
-      if (category?.id && category?.name) {
-        map.set(category.id, {id: category.id, name: category.name, kind: 'custom', order: 1000});
-      }
-    }
     for (const question of getAllQuestions()) {
       if (!map.has(question.categoryId)) {
         map.set(question.categoryId, {
           id: question.categoryId,
-          name: question.categoryName || 'Eigene Fragen',
-          kind: question.categoryId.startsWith('test-') ? 'base' : 'custom',
-          order: question.categoryId.startsWith('test-') ? Number(question.categoryId.replace('test-', '')) : 1000
+          name: question.categoryName || `Kapitel ${question.test || ''}`.trim(),
+          kind: question.origin === 'custom' ? 'custom' : 'base',
+          order: Number(question.test || question.chapter || 1000)
         });
+      }
+    }
+    for (const category of store.customCategories || []) {
+      if (category?.id && category?.name && !map.has(category.id)) {
+        map.set(category.id, {id: category.id, name: category.name, kind: 'custom', order: 1000});
       }
     }
     return [...map.values()].sort((a, b) => {
@@ -425,10 +493,10 @@
       <header class="topbar">
         <div class="topbar-inner">
           <button class="brand" type="button" data-action="home" aria-label="Startseite">
-            <div class="brand-mark"><span>Q</span></div>
+            <div class="brand-mark"><span>V</span></div>
             <div class="brand-copy">
-              <div class="brand-title">QMB Lernplattform</div>
-              <div class="brand-sub">Wachsende Lern- und Fragendatenbank</div>
+              <div class="brand-title">Verkäufertrainer</div>
+              <div class="brand-sub">Lern- und Testplattform · 23 Kapitel</div>
             </div>
           </button>
           <nav class="main-nav" aria-label="Hauptnavigation">
@@ -446,9 +514,9 @@
       </header>
       <main>${content}
         <footer class="footer-note">
-          <span>${total} aktive Fragen · Doppelte Fragen bleiben erhalten</span>
-          <span>Excel-Datei: Teichi · Fachliche Betreuung: Bettina Walker</span>
-          <span>Konzept & Produktidee: Christian Nitzsche · technische Umsetzung mit KI-Unterstützung</span>
+          <span>${total} aktive Fragen · 23 Kapitel mit jeweils 40 Fragen</span>
+          <span>Fragenbasis: Excel-Arbeitsmappe „Multiple Choice Kapitel 1 bis 23“</span>
+          <span>Konzept & Umsetzung: Christian Nitzsche · technische Unterstützung durch KI</span>
           <button class="footer-link" type="button" data-action="info">Urheberschaft & Datenschutz</button>
           <span>${esc(databaseLabel())}</span>
         </footer>
@@ -470,6 +538,7 @@
     else if (state.view === 'startSetup') renderStartSetup();
     else if (state.view === 'statistics') renderStatistics();
     else if (state.view === 'learningPath') renderLearningPath();
+    else if (state.view === 'auditJourney') renderAuditJourney();
     else if (state.view === 'documentSearch') renderDocumentSearch();
     else if (state.view === 'openBookHome') renderOpenBookHome();
     else if (state.view === 'openBookQuestion') renderOpenBookQuestion();
@@ -491,123 +560,60 @@
     app.innerHTML = layout(`
       <section class="hero-panel">
         <div class="hero-content">
-          <div class="eyebrow"><span class="status-dot"></span> QMB Lernplattform</div>
-          <h1>Professionell lernen. Sicher prüfen. Wissen gezielt festigen.</h1>
-          <p class="lead">Der vollständige Originaler Fragenbestand bleibt die Prüfungsgrundlage. Antwortpositionen werden in jedem Durchgang neu gemischt, damit kein erkennbares Lösungsmuster entsteht.</p>
+          <div class="eyebrow"><span class="status-dot"></span> Verkäufertrainer</div>
+          <h1>Verkaufen verstehen. Kaufmännisch rechnen. Sicher testen.</h1>
+          <p class="lead">920 Multiple-Choice-Fragen aus 23 Kapiteln bilden die vollständige Lern- und Testgrundlage. Eine oder mehrere Antworten können richtig sein; die Antwortpositionen werden bei jedem Durchgang neu gemischt.</p>
           <div class="hero-actions">
-            <button class="primary-btn large" data-action="learning-path">Geführten Lernpfad öffnen</button>
-            <button class="secondary-btn large" data-action="start-quick-exam">Prüfung mit 45 Fragen</button>
+            <button class="primary-btn large" data-action="learning-path">Verkäufer-Lernreise starten</button>
+            <button class="secondary-btn large" data-action="start-quick-exam">Test mit 45 Fragen</button>
             <button class="secondary-btn large" data-action="database">Fragendatenbank pflegen</button>
           </div>
         </div>
         <div class="hero-visual" aria-hidden="true">
-          <div class="visual-orbit orbit-one"></div>
-          <div class="visual-orbit orbit-two"></div>
-          <div class="visual-card main-visual-card">
-            <div class="visual-icon">✓</div>
-            <strong>${questions.length}</strong>
-            <span>aktive Fragen</span>
-          </div>
-          <div class="visual-chip chip-one">${getCategories().length} Kategorien</div>
+          <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
+          <div class="visual-card main-visual-card"><div class="visual-icon">✓</div><strong>${questions.length}</strong><span>aktive Fragen</span></div>
+          <div class="visual-chip chip-one">${getCategories().length} Kapitel</div>
           <div class="visual-chip chip-two">${customCount} eigene Fragen</div>
         </div>
       </section>
 
-      ${store.activeSession ? `<section class="resume-session-card">
-        <div>
-          <div class="eyebrow">Gespeicherter Durchgang</div>
-          <h2>${esc(store.activeSession.label || 'Lernrunde')}</h2>
-          <p>Du warst bei Frage <strong>${Math.min((store.activeSession.index || 0) + 1, store.activeSession.questions?.length || 0)}</strong> von <strong>${store.activeSession.questions?.length || 0}</strong>. Antworten, Reihenfolge und Zeitstand sind gespeichert.</p>
-        </div>
-        <div class="actions"><button class="primary-btn" data-action="resume-session">Genau dort fortsetzen</button><button class="ghost-btn" data-action="discard-session">Durchgang verwerfen</button></div>
-      </section>` : ''}
+      ${store.activeSession ? `<section class="resume-session-card"><div><div class="eyebrow">Gespeicherter Durchgang</div><h2>${esc(store.activeSession.label || 'Lernrunde')}</h2><p>${activeSessionPositionText(store.activeSession)}</p></div><div class="actions"><button class="primary-btn" type="button" data-action="resume-session">Genau dort fortsetzen</button><button class="ghost-btn" type="button" data-action="discard-session">Durchgang verwerfen</button></div></section>` : ''}
 
       <section class="stats">
-        <div class="stat"><div class="stat-icon">Q</div><div><strong>${questions.length}</strong><span>Fragen insgesamt</span></div></div>
-        <div class="stat"><div class="stat-icon">＋</div><div><strong>${customCount}</strong><span>selbst ergänzt</span></div></div>
+        <div class="stat"><div class="stat-icon">V</div><div><strong>${questions.length}</strong><span>Fragen insgesamt</span></div></div>
+        <div class="stat"><div class="stat-icon">23</div><div><strong>${getCategories().length}</strong><span>Kapitel</span></div></div>
         <div class="stat"><div class="stat-icon">✎</div><div><strong>${editedCount}</strong><span>aktualisiert</span></div></div>
         <div class="stat"><div class="stat-icon">%</div><div><strong>${accuracy}%</strong><span>Trefferquote</span></div></div>
       </section>
 
-      <section class="openbook-home-feature">
-        <div><div class="eyebrow">Neu · Lernen mit externen Originalunterlagen</div><h2>Drei getrennte Dokumenten-Lernmodule</h2><p>Komplexe Freitextaufgaben zwingen zum Nachschlagen. Bei Fehlern erscheint nur die exakte Fundstelle – keine vorweggenommene Lösung.</p></div>
-        <div class="actions"><button class="secondary-btn" data-action="start-openbook" data-source="iso">ISO-Lernmodul</button><button class="secondary-btn" data-action="start-openbook" data-source="modul1">Modul 1 Lernmodul</button><button class="secondary-btn" data-action="start-openbook" data-source="modul2">Modul 2 Lernmodul</button></div>
-      </section>
-
-      <section class="learning-path-feature">
-        <div class="learning-path-feature-copy"><div class="eyebrow">Umfangreichster Lernbereich</div><h2>QMB Lernpfad – verstehen, verknüpfen, anwenden</h2><p>Die 473 App-Fragen werden mit ISO, TÜV Modul 1 und TÜV Modul 2 thematisch verbunden. Der Pfad führt dich in kleinen Etappen und reagiert mit passenden Lernhinweisen auf deinen Fortschritt.</p><div class="path-source-row"><span>ISO</span><span>TÜV Modul 1</span><span>TÜV Modul 2</span><span>App-Fragen</span></div></div><button class="primary-btn large" data-action="learning-path">Lernpfad starten</button>
-      </section>
-
-      <section class="document-search-home">
-        <div><div class="eyebrow">Direkt in den Prüfungsunterlagen suchen</div><h2>Drei getrennte PDF-Suchen</h2><p>ISO, TÜV Modul 1 und TÜV Modul 2 werden jeweils als unverändertes Original-PDF geöffnet.</p></div>
-        <div class="actions"><button class="secondary-btn" data-action="document-search" data-source="iso">ISO-Suche</button><button class="secondary-btn" data-action="document-search" data-source="modul1">Modul 1 Suche</button><button class="secondary-btn" data-action="document-search" data-source="modul2">Modul 2 Suche</button></div>
+      <section class="learning-path-feature seller-journey-feature">
+        <div class="learning-path-feature-copy"><div class="eyebrow">Durchgehende Geschichte · 23 Etappen</div><h2>Vom ersten Arbeitstag bis zum eigenen Marktkonzept</h2><p>Jede der 920 Fragen wird zuerst neutral beantwortet. Danach folgt die passende Verkaufsszene mit Lösungseinordnung, Korrektur und Gedächtnisanker.</p><div class="path-source-row"><span>Warenwirtschaft</span><span>Rechnungswesen</span><span>Recht</span><span>Verkauf & Marketing</span></div></div><button class="primary-btn large" data-action="learning-path">Lernreise öffnen</button>
       </section>
 
       <section class="mode-grid">
         <article class="mode-card learn-card">
           <div class="mode-top"><div class="mode-icon">L</div><span class="mode-tag">Mit Sofortlösung</span></div>
-          <h2>Lernmodus</h2>
-          <p>Lösungen direkt prüfen, Hinweise lesen und falsch beantwortete Fragen automatisch sammeln.</p>
-          <div class="form-grid">
-            <div class="field"><label for="learnCategory">Kategorie</label><select id="learnCategory">${categoryOptions('all')}</select></div>
-            <div class="field"><label for="learnOrder">Reihenfolge</label><select id="learnOrder"><option value="sequential">Geordnet</option><option value="random">Zufällig</option></select></div>
-          </div>
-          <div class="actions">
-            <button class="primary-btn" data-action="start-learn">Lernen starten</button>
-            <button class="secondary-btn" data-action="repeat-wrong" ${wrongQuestions.length ? '' : 'disabled'}>Fehlerfragen (${wrongQuestions.length})</button>
-          </div>
+          <h2>Lernmodus</h2><p>Lösungen direkt prüfen und falsch beantwortete Fragen automatisch sammeln.</p>
+          <div class="form-grid"><div class="field"><label for="learnCategory">Kapitel</label><select id="learnCategory">${categoryOptions('all')}</select></div><div class="field"><label for="learnOrder">Reihenfolge</label><select id="learnOrder"><option value="sequential">Geordnet</option><option value="random">Zufällig</option></select></div></div>
+          <div class="actions"><button class="primary-btn" data-action="start-learn">Lernen starten</button><button class="secondary-btn" data-action="repeat-wrong" ${wrongQuestions.length ? '' : 'disabled'}>Fehlerfragen (${wrongQuestions.length})</button></div>
         </article>
-
         <article class="mode-card exam-card">
-          <div class="mode-top"><div class="mode-icon">P</div><span class="mode-tag">Mit Zeitmessung</span></div>
-          <h2>Prüfungsmodus</h2>
-          <p>Zufällige Fragen ohne Lösungshinweise. Die Auswertung erfolgt erst nach dem Abschluss.</p>
-          <div class="form-grid">
-            <div class="field"><label for="examCategory">Kategorie</label><select id="examCategory">${categoryOptions('all')}</select></div>
-            <div class="field"><label for="examCount">Fragenanzahl</label><input id="examCount" type="number" min="1" max="${questions.length}" value="45"></div>
-            <div class="field"><label for="passThreshold">Bestehensgrenze</label><div class="input-suffix"><input id="passThreshold" type="number" min="1" max="100" value="${store.passThreshold || 70}"><span>%</span></div></div>
-          </div>
-          <div class="actions"><button class="primary-btn" data-action="start-exam">Prüfung starten</button></div>
-          <div class="hint">Richtig ist eine Frage nur, wenn exakt alle richtigen Antworten und keine falsche Antwort markiert wurden.</div>
+          <div class="mode-top"><div class="mode-icon">T</div><span class="mode-tag">Mit Zeitmessung</span></div>
+          <h2>Testmodus</h2><p>Zufällige Verkäuferfragen ohne Lösungshinweise. Die Auswertung erfolgt erst am Ende.</p>
+          <div class="form-grid"><div class="field"><label for="examCategory">Kapitel</label><select id="examCategory">${categoryOptions('all')}</select></div><div class="field"><label for="examCount">Fragenanzahl</label><input id="examCount" type="number" min="1" max="${questions.length}" value="45"></div><div class="field"><label for="passThreshold">Bestehensgrenze</label><div class="input-suffix"><input id="passThreshold" type="number" min="1" max="100" value="${store.passThreshold || 70}"><span>%</span></div></div></div>
+          <div class="actions"><button class="primary-btn" data-action="start-exam">Test starten</button></div>
+          <div class="hint">Richtig ist eine Frage nur, wenn exakt alle richtigen und keine falsche Antwort markiert wurden.</div>
         </article>
-
-        <article class="utility-card">
-          <div class="utility-icon">⌕</div><div><h3>Fragenkatalog</h3><p>Fragen, Antworten und Erläuterungen durchsuchen.</p></div><button class="round-btn" data-action="catalog">→</button>
-        </article>
-        <article class="utility-card database-utility">
-          <div class="utility-icon">▦</div><div><h3>Wachsende Datenbank</h3><p>Fragen ergänzen, bearbeiten, sichern und übertragen.</p></div><button class="round-btn" data-action="database">→</button>
-        </article>
-        <article class="utility-card statistics-utility">
-          <div class="utility-icon">▥</div><div><h3>Aktuelle & Langzeitstatistik</h3><p>Fortschritt, Lernfelder, Fehler und Antwortneigungen auswerten.</p></div><button class="round-btn" data-action="statistics">→</button>
-        </article>
+        <article class="utility-card"><div class="utility-icon">⌕</div><div><h3>Fragenkatalog</h3><p>Alle 920 Fragen und Lösungen durchsuchen.</p></div><button class="round-btn" data-action="catalog">→</button></article>
+        <article class="utility-card database-utility"><div class="utility-icon">▦</div><div><h3>Wachsende Datenbank</h3><p>Fragen ergänzen, bearbeiten, sichern und übertragen.</p></div><button class="round-btn" data-action="database">→</button></article>
+        <article class="utility-card statistics-utility"><div class="utility-icon">▥</div><div><h3>Statistik</h3><p>Fortschritt, Kapitel und Fehler auswerten.</p></div><button class="round-btn" data-action="statistics">→</button></article>
       </section>
 
-      <section class="break-setting-card professional-status-card">
-        <div class="break-setting-copy">
-          <div class="eyebrow">Bewusste Lernsteuerung</div>
-          <h2>Erholungspausen werden vor jeder Runde direkt abgefragt</h2>
-          <p>Kein übersehbarer Schalter mehr. Du entscheidest vor jedem Lern- oder Prüfungsstart bewusst zwischen „mit Pause“ und „ohne Pause“.</p>
-          <p><strong>${Math.max(0, store.breakNextAt - store.breakAnsweredTotal)} Fragen</strong> bis zum nächsten 50er-Meilenstein · insgesamt ${store.breakAnsweredTotal} gezählt.</p>
-        </div>
-        <div class="status-seal"><span>50</span><small>Fragen</small></div>
-      </section>
+      <section class="break-setting-card professional-status-card"><div class="break-setting-copy"><div class="eyebrow">Bewusste Lernsteuerung</div><h2>Erholungspause nach jeweils 50 Fragen</h2><p>Vor jedem Lern- oder Testdurchgang entscheidest du, ob die wechselnden Pausen genutzt werden. Die Zählung beginnt bei jeder neuen Runde bei null.</p></div><div class="status-seal"><span>50</span><small>Fragen</small></div></section>
 
-      <section class="transparency-strip">
-        <div>
-          <strong>Excel-Grundlage: Teichi · Fachliche Betreuung: Bettina Walker · Konzept & Produktidee: Christian Nitzsche · technische Umsetzung mit OpenAI ChatGPT</strong>
-          <p>Die App arbeitet lokal im Browser. Bei der Nutzung werden keine Fragen, Antworten oder Lernstände an einen KI-Dienst übertragen.</p>
-        </div>
-        <button class="ghost-btn" type="button" data-action="info">Details ansehen</button>
-      </section>
+      <section class="transparency-strip"><div><strong>Fragenbasis: 23 Kapitel · 920 Verkäuferfragen · technische Umsetzung mit KI-Unterstützung</strong><p>Die App arbeitet lokal im Browser. Fragen, Antworten und Lernstände werden nicht an einen KI-Dienst übertragen.</p></div><button class="ghost-btn" type="button" data-action="info">Details ansehen</button></section>
 
-      ${history.length ? `<section class="section-block">
-        <div class="section-heading"><div><div class="eyebrow">Verlauf</div><h2>Letzte Prüfungen</h2></div><button class="ghost-btn" data-action="reset-progress">Lernstand zurücksetzen</button></div>
-        <div class="history">${history.map(item => `<div class="history-row">
-          <div class="history-symbol ${item.passed ? 'pass-bg' : 'fail-bg'}">${item.passed ? '✓' : '!'}</div>
-          <div class="history-main"><strong>${esc(item.label)}</strong><span>${new Date(item.date).toLocaleDateString('de-DE')} · ${fmtTime(item.seconds)}</span></div>
-          <span class="score ${item.passed ? 'pass' : 'fail'}">${item.percent}%</span>
-        </div>`).join('')}</div>
-      </section>` : ''}
+      ${history.length ? `<section class="section-block"><div class="section-heading"><div><div class="eyebrow">Verlauf</div><h2>Letzte Tests</h2></div><button class="ghost-btn" data-action="reset-progress">Lernstand zurücksetzen</button></div><div class="history">${history.map(item => `<div class="history-row"><div class="history-symbol ${item.passed ? 'pass-bg' : 'fail-bg'}">${item.passed ? '✓' : '!'}</div><div class="history-main"><strong>${esc(item.label)}</strong><span>${new Date(item.date).toLocaleDateString('de-DE')} · ${fmtTime(item.seconds)}</span></div><span class="score ${item.passed ? 'pass' : 'fail'}">${item.percent}%</span></div>`).join('')}</div></section>` : ''}
     `);
   }
 
@@ -615,12 +621,15 @@
     const selectedQuestions = mode === 'exam'
       ? shuffle(pool).slice(0, Math.min(options.count || 45, pool.length))
       : (options.random ? shuffle(pool) : [...pool]);
-    const limitedQuestions = mode === 'path' ? selectedQuestions.slice(0, Math.min(options.count || 12, selectedQuestions.length)) : selectedQuestions;
+    const runId = options.runId || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const cycle = Number(options.cycle || 1);
 
-    // Für jeden Durchgang werden die Antwortpositionen neu gemischt.
-    // Der fachliche Inhalt und die Kennzeichnung der richtigen Lösungen bleiben unverändert.
-    return limitedQuestions.map(question => ({
+    // Für jeden Durchgang werden nur die Antwortpositionen neu gemischt.
+    // Die Fragenreihenfolge im Lernpfad bleibt stabil, damit kein festes Zahlenmuster gelernt wird.
+    // Im Lernpfad wird der vollständige Fragenpool verwendet – keine Begrenzung auf 12 Fragen.
+    return selectedQuestions.map((question, index) => ({
       ...question,
+      sessionUid: `${question.uid}::${runId}::${cycle}::${index}`,
       answers: shuffle((question.answers || []).map(answer => ({...answer})))
     }));
   }
@@ -638,11 +647,7 @@
 
 
 
-  const VERIFIED_DOCUMENTS = {
-    iso: {title:'ISO-Suche', file:'./docs/Iso_Nummern.pdf', label:'ISO-Unterlage'},
-    modul1: {title:'TÜV Modul 1 Suche', file:'./docs/TUEV_QB_Modul1.pdf', label:'TÜV Modul 1'},
-    modul2: {title:'TÜV Modul 2 Suche', file:'./docs/TUEV_QB_Modul2.pdf', label:'TÜV Modul 2'}
-  };
+  const VERIFIED_DOCUMENTS = {};
 
   function verifiedSourceNotes(question) {
     const raw = [];
@@ -653,41 +658,33 @@
   }
 
   function renderDocumentSearch() {
-    const source = state.documentSearchSource || 'iso';
-    const doc = VERIFIED_DOCUMENTS[source] || VERIFIED_DOCUMENTS.iso;
-    const cards = Object.entries(VERIFIED_DOCUMENTS).map(([id,item]) => `
-      <button class="document-search-card ${id===source?'active':''}" data-action="select-document-search" data-source="${id}">
-        <span class="document-search-icon">⌕</span><strong>${esc(item.title)}</strong><small>Suche direkt im Original-PDF</small>
-      </button>`).join('');
-    app.innerHTML = layout(`<section class="document-search-page">
-      <div class="eyebrow">Prüfungsunterlagen</div><h1>Direkte PDF-Suche</h1>
-      <p class="lead">Wähle das Dokument und öffne es. Die Suche erfolgt im Original-PDF über das Lupen-Symbol beziehungsweise „Im Dokument suchen“ des PDF-Readers.</p>
-      <div class="document-search-grid">${cards}</div>
-      <section class="document-search-focus"><div><div class="eyebrow">Ausgewählt</div><h2>${esc(doc.label)}</h2><p>Es wird ausschließlich das unveränderte Originaldokument geöffnet. Damit kannst du während der Prüfung direkt im zugelassenen PDF suchen.</p></div>
-      <a class="primary-btn large" href="${doc.file}" target="_blank" rel="noopener">${esc(doc.label)} öffnen und durchsuchen</a></section>
-      <div class="verified-only-note"><strong>Belegregel:</strong> Erklärungen in der App werden nur angezeigt, wenn eine eindeutige Fundstelle aus ISO, TÜV Modul 1 oder TÜV Modul 2 hinterlegt ist. Ohne Fundstelle wird kein Erklärungstext erzeugt.</div>
-    </section>`);
+    state.view = 'home';
+    render();
   }
 
   function renderLearningPath() {
     const moduleCards = LEARNING_PATH_MODULES.map(module => {
       const st = moduleStats(module);
       const pool = questionsForLearningModule(module);
-      const status = st.completed ? 'Prüfungsreif' : st.started ? 'In Bearbeitung' : 'Noch nicht begonnen';
-      const cls = st.completed ? 'done' : st.started ? 'active' : '';
-      return `<article class="path-module ${cls}">
+      const activePath = store.activeSession?.mode === 'path' && store.activeSession?.pathModuleId === module.id;
+      const status = activePath ? 'Lernreise pausiert' : st.stage;
+      const cls = (st.started || activePath) ? 'active' : '';
+      return `<article class="path-module seller-journey-card ${cls}">
         <div class="path-module-number">${module.icon}</div>
-        <div class="path-module-main"><div class="path-module-head"><div><span class="path-status">${status}</span><h2>${esc(module.title)}</h2></div><strong>${st.attempts ? st.accuracy+'%' : '–'}</strong></div>
-        <p>${esc(module.short)}</p><div class="path-progress"><span style="width:${st.completed?100:Math.min(90,st.attempts*8)}%"></span></div>
-        <div class="path-meta"><span>${pool.length} passende Fragen</span><span>${st.attempts} Versuche</span><span>${st.correct} richtig</span></div>
-        <details class="path-details"><summary>Lernziel und Quellen</summary><div><p><strong>Lernziel:</strong> ${esc(module.goal)}</p><p><strong>Denkimpuls:</strong> ${esc(module.impulse)}</p><ul><li>${esc(module.iso)}</li><li>${esc(module.m1)}</li><li>${esc(module.m2)}</li></ul></div></details>
-        <div class="actions"><button class="primary-btn" data-action="start-path-module" data-module="${module.id}">${st.started ? 'Weiterlernen' : 'Abschnitt beginnen'}</button><button class="ghost-btn" data-action="open-path-docs">Dokumente öffnen</button></div></div>
+        <div class="path-module-main"><div class="path-module-head"><div><span class="path-status">Etappe ${module.order} · ${status}</span><h2>${esc(module.title)}</h2></div><strong>${st.attempts ? st.accuracy+'%' : '–'}</strong></div>
+        <p class="journey-arc">${esc(module.arc)}</p>
+        <div class="journey-location"><span>Ort</span><strong>${esc(module.station)}</strong></div>
+        <div class="journey-people"><span>Begleitung</span><strong>${esc(module.people)}</strong></div>
+        <div class="path-progress"><span style="width:${Math.min(100, st.attempts / Math.max(1, pool.length) * 100)}%"></span></div>
+        <div class="path-meta"><span>${pool.length} Szenen</span><span>${st.attempts} Versuche</span><span>${st.correct} richtig</span></div>
+        <details class="path-details"><summary>Etappenziel und Abschluss</summary><div><p>${esc(module.goal)}</p><p><strong>Meilenstein:</strong> ${esc(module.milestone)}</p><p><strong>Gedächtnisbild:</strong> ${esc(module.anchor)}</p></div></details>
+        <div class="actions"><button class="primary-btn" data-action="${activePath ? 'resume-session' : 'start-path-module'}" data-module="${module.id}">${activePath ? 'Genau hier weitererzählen' : st.started ? 'Etappe neu beginnen' : 'Etappe beginnen'}</button></div></div>
       </article>`;
     }).join('');
-    const completed=LEARNING_PATH_MODULES.filter(m=>moduleStats(m).completed).length;
-    app.innerHTML=layout(`<div class="path-page">
-      <section class="path-hero"><div><div class="eyebrow">Eigenständiger didaktischer Lernbereich</div><h1>QMB Lernpfad</h1><p class="lead">Entdecken → Verstehen → Verknüpfen → Anwenden → Prüfen → Wiederholen. Grundlage sind ISO, TÜV Modul 1, TÜV Modul 2 und der vollständige Fragenbestand der App.</p><div class="inspiration-note"><strong>Didaktische Inspiration</strong><p>Dieser eigenständig entwickelte Lernpfad würdigt öffentlich vermittelte Lernideen von <strong>Ricardo Leppe</strong>: Lernen soll neugierig machen, Zusammenhänge sichtbar machen und Menschen befähigen, Wissen selbstständig anzuwenden. Ricardo Leppe war an der Erstellung dieser App nicht beteiligt.</p></div></div><div class="path-overview"><strong>${completed}/${LEARNING_PATH_MODULES.length}</strong><span>Abschnitte abgeschlossen</span><div class="path-progress large"><span style="width:${completed/LEARNING_PATH_MODULES.length*100}%"></span></div></div></section>
-      <section class="path-documents"><div><div class="eyebrow">Originalunterlagen</div><h2>Beim Lernen direkt nachschlagen</h2><p>Die Dokumente öffnen sich lokal. Nutze die Suchfunktion des PDF-Readers, um Begriffe und Kapitel selbst zu finden.</p></div><div class="actions"><button class="secondary-btn" data-action="document-search" data-source="iso">ISO-Suche</button><button class="secondary-btn" data-action="document-search" data-source="modul1">Modul 1 Suche</button><button class="secondary-btn" data-action="document-search" data-source="modul2">Modul 2 Suche</button></div></section>
+    const totalPathAnswers = LEARNING_PATH_MODULES.reduce((sum,m)=>sum+moduleStats(m).attempts,0);
+    app.innerHTML=layout(`<div class="path-page seller-journey-page">
+      <section class="path-hero seller-journey-hero"><div><div class="eyebrow">23 Etappen · 920 Verkaufsszenen</div><h1>Verkäufer-Lernreise</h1><p class="lead">Du beginnst als neuer Verkäufer in einem deutschen Lebensmittelmarkt. Mit jeder Etappe wächst deine Verantwortung – vom ersten Regal bis zum eigenen tragfähigen Marktkonzept.</p><div class="journey-principle"><strong>Frage zuerst – Geschichte danach.</strong><span>Die Hilfe gibt nur eine Denkrichtung. Die Lösung erscheint erst nach deiner Entscheidung.</span></div></div><div class="path-overview"><strong>${totalPathAnswers}</strong><span>beantwortete Szenen</span><div class="path-progress large"><span style="width:${Math.min(100,totalPathAnswers/9.2)}%"></span></div><small>Fortschritt und genaue Szene werden lokal auf diesem Gerät gespeichert.</small></div></section>
+      <section class="journey-timeline-intro"><strong>Deine Entwicklung</strong><span>Verkäufer → Schichtverantwortung → kaufmännisches Denken → Marketing → eigenes Geschäft</span></section>
       <section class="path-modules">${moduleCards}</section>
     </div>`);
   }
@@ -695,50 +692,45 @@
   function renderStartSetup() {
     const pending = state.pendingSession;
     if (!pending) { state.view = 'home'; render(); return; }
-    const modeName = pending.mode === 'exam' ? 'Prüfung' : pending.mode === 'review' ? 'Fehlertraining' : 'Lernrunde';
+    const modeName = pending.mode === 'exam' ? 'Test' : pending.mode === 'review' ? 'Fehlertraining' : pending.mode === 'path' ? 'Verkäufer-Lernreise' : 'Lernrunde';
     app.innerHTML = layout(`<section class="start-setup-shell">
-      <div class="start-setup-badge">Vor dem Start</div>
-      <h1>${modeName} vorbereiten</h1>
+      <div class="start-setup-badge">Vor dem Start</div><h1>${modeName} vorbereiten</h1>
       <p class="lead">Möchtest du nach jeweils 50 beantworteten Fragen eine wechselnde Erholungspause nutzen?</p>
-      <div class="start-choice-grid">
-        <button class="start-choice positive" data-action="confirm-start" data-pause="yes">
-          <span class="start-choice-icon">✓</span>
-          <strong>Ja, Erholungspausen nutzen</strong>
-          <small>Atemwelle, Fernblick und Lockerung wechseln automatisch.</small>
-        </button>
-        <button class="start-choice neutral" data-action="confirm-start" data-pause="no">
-          <span class="start-choice-icon">→</span>
-          <strong>Nein, direkt starten</strong>
-          <small>Die Runde läuft ohne automatische Unterbrechung.</small>
-        </button>
-      </div>
-      <div class="duration-panel">
-        <label for="startBreakDuration">Pausendauer bei Auswahl „Ja“</label>
-        <div class="duration-options">
-          ${[2,3,4,5].map(min => `<label><input type="radio" name="startBreakDuration" value="${min}" ${Number(store.breakDurationMinutes || 3) === min ? 'checked' : ''}><span>${min} Min.</span></label>`).join('')}
-        </div>
-      </div>
-      <div class="data-foundation-note"><strong>Prüfungsgrundlage:</strong> Der vorhandene ursprüngliche Fragenbestand bleibt vollständig erhalten. Fragen und Antworten werden nur neu angeordnet, nicht inhaltlich verändert.</div>
+      <div class="start-choice-grid"><button class="start-choice positive" data-action="confirm-start" data-pause="yes"><span class="start-choice-icon">✓</span><strong>Ja, Erholungspausen nutzen</strong><small>Atemwelle, Fernblick und Lockerung wechseln automatisch.</small></button><button class="start-choice neutral" data-action="confirm-start" data-pause="no"><span class="start-choice-icon">→</span><strong>Nein, direkt starten</strong><small>Die Runde läuft ohne automatische Unterbrechung.</small></button></div>
+      <div class="duration-panel"><label for="startBreakDuration">Pausendauer bei Auswahl „Ja“</label><div class="duration-options">${[2,3,4,5].map(min => `<label><input type="radio" name="startBreakDuration" value="${min}" ${Number(store.breakDurationMinutes || 3) === min ? 'checked' : ''}><span>${min} Min.</span></label>`).join('')}</div></div>
+      <div class="data-foundation-note"><strong>Fragenbasis:</strong> 920 Verkäuferfragen aus 23 Kapiteln. Im Lernreisemodus besitzt jede Frage zusätzlich eine Verkaufsszene, eine lösungsfreie Hilfe und einen Gedächtnisanker. Fragen und Lösungsschlüssel bleiben unverändert; nur die Antwortpositionen werden neu gemischt.</div>
       <button class="ghost-btn" data-action="cancel-start">Zurück</button>
     </section>`);
   }
 
   function startSession(mode, pool, options = {}) {
-    const questions = prepareQuestionsForSession(mode, pool, options);
+    const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const questions = prepareQuestionsForSession(mode, pool, {...options, runId, cycle: 1});
     state.session = {
       mode,
       questions,
       index: 0,
       selections: {},
       checked: {},
+      hints: {},
+      caratHelpShown: {},
       startedAt: Date.now(),
       endedAt: null,
       threshold: options.threshold || store.passThreshold || 70,
       label: options.label || 'Lernmodus',
       pathModuleId: options.pathModuleId || null,
+      auditChapterId: options.auditChapterId || null,
+      auditChapterNumber: options.auditChapterNumber || null,
       breakGameEnabled: Boolean(options.breakGameEnabled),
       breakDurationMinutes: Number(options.breakDurationMinutes || store.breakDurationMinutes || 3),
+      breakAnsweredInSession: 0,
+      breakNextAtInSession: 50,
       completedUids: [],
+      sessionRunId: runId,
+      pathPoolUids: mode === 'path' ? pool.map(question => question.uid) : [],
+      pathCycle: mode === 'path' ? 1 : 0,
+      pathAnsweredTotal: 0,
+      auditAnsweredTotal: 0,
       currentQuestionStartedAt: Date.now(),
       correctInSession: 0,
       wrongInSession: 0
@@ -747,6 +739,29 @@
     state.view = 'session';
     saveActiveSession();
     render();
+  }
+
+  function speechAvailable() {
+    return Boolean(globalThis.speechSynthesis && globalThis.SpeechSynthesisUtterance);
+  }
+
+  function speakInstruction(text) {
+    if (!speechAvailable() || !text) return false;
+    globalThis.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(String(text));
+    utterance.lang = 'de-DE';
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+    globalThis.speechSynthesis.speak(utterance);
+    return true;
+  }
+
+  function currentRestInstruction() {
+    const game = state.game;
+    if (!game) return '';
+    if (game.module.id === 'distance') return DISTANCE_CUES[Math.max(0, game.cueIndex) % DISTANCE_CUES.length] || DISTANCE_CUES[0];
+    if (game.module.id === 'move') return MOVE_CUES[Math.max(0, game.cueIndex) % MOVE_CUES.length] || MOVE_CUES[0];
+    return 'Atme bequem ein, wenn der Kreis größer wird, und etwas länger aus, wenn er kleiner wird.';
   }
 
   const BREAK_MODULES = [
@@ -759,22 +774,24 @@
     const session = state.session;
     if (!session || !session.breakGameEnabled) return false;
     if (!Array.isArray(session.completedUids)) session.completedUids = [];
-    if (session.completedUids.includes(question.uid)) return false;
-    session.completedUids.push(question.uid);
+    const key = sessionQuestionKey(question);
+    if (session.completedUids.includes(key)) return false;
+    session.completedUids.push(key);
+    session.breakAnsweredInSession = Number(session.breakAnsweredInSession || 0) + 1;
     store.breakAnsweredTotal = Number(store.breakAnsweredTotal || 0) + 1;
-    if (!Number.isFinite(store.breakNextAt) || store.breakNextAt < 50) store.breakNextAt = 50;
-    const reached = store.breakAnsweredTotal >= store.breakNextAt;
+    if (!Number.isFinite(Number(session.breakNextAtInSession)) || Number(session.breakNextAtInSession) < 50) session.breakNextAtInSession = 50;
+    const reached = Number(session.breakAnsweredInSession) >= Number(session.breakNextAtInSession);
     saveStore();
     if (!reached) return false;
     const moduleIndex = Number(store.breakRotationIndex || 0) % BREAK_MODULES.length;
     state.breakPrompt = {
       returnView: 'session',
-      milestone: store.breakNextAt,
+      milestone: session.breakNextAtInSession,
       moduleIndex
     };
-    store.breakNextAt += 50;
+    session.breakNextAtInSession += 50;
     store.breakRotationIndex = (moduleIndex + 1) % BREAK_MODULES.length;
-    saveStore();
+    saveActiveSession();
     state.view = 'breakPrompt';
     render();
     return true;
@@ -788,7 +805,7 @@
       <div class="eyebrow">${milestone} Fragen geschafft</div>
       <h1>Zeit für eine echte Entlastung</h1>
       <p class="lead">Als Nächstes: <strong>${module.title}</strong> – ${module.subtitle}.</p>
-      <p>Die Pausen wechseln automatisch. Es gibt keine Punkte, keine Bestenliste und keine zusätzliche Prüfungsaufgabe.</p>
+      <p>Die Pausen wechseln automatisch. Es gibt keine Punkte, keine Bestenliste und keine zusätzliche Testaufgabe.</p>
       <div class="break-choice-grid single-choice">
         <button class="break-choice featured" data-action="start-game" data-minutes="${state.session?.breakDurationMinutes || store.breakDurationMinutes || 3}"><strong>Pause starten</strong><span>${state.session?.breakDurationMinutes || store.breakDurationMinutes || 3} Minuten · ${module.title}</span></button>
       </div>
@@ -828,6 +845,9 @@
         if (game.module.id === 'move') cue.textContent = MOVE_CUES[cueIndex % MOVE_CUES.length];
         if (game.module.id === 'distance') cue.textContent = DISTANCE_CUES[cueIndex % DISTANCE_CUES.length];
       }
+      if ((game.module.id === 'move' || game.module.id === 'distance') && cueIndex > 0) {
+        speakInstruction(currentRestInstruction());
+      }
     }
     if (left <= 0) endGameBreak();
   }
@@ -843,6 +863,7 @@
     };
     state.view = 'game';
     render();
+    window.setTimeout(() => speakInstruction(currentRestInstruction()), 250);
   }
 
   function renderGame() {
@@ -857,7 +878,7 @@
       activity = `<div class="distance-stage">
         <div class="distance-icon">⌁</div>
         <p id="restCue">${DISTANCE_CUES[0]}</p>
-        <p class="rest-small">Lege das Smartphone möglichst ab. Diese Pause funktioniert besser, wenn du nicht weiter auf den Bildschirm starrst.</p>
+        <p class="rest-small">Lege das Gerät ab und löse den Blick vom Bildschirm. Die nächste Anweisung wird automatisch vorgelesen.</p>
       </div>`;
     } else {
       activity = `<div class="move-stage">
@@ -870,7 +891,7 @@
       <div class="game-head"><div><div class="eyebrow">Erholungspause ${game.module.icon}</div><h1>${game.module.title}</h1><p>${game.module.subtitle}</p></div>
       <div class="game-stats"><span>Restzeit <strong id="gameTime">${fmtTime(game.minutes * 60)}</strong></span></div></div>
       ${activity}
-      <div class="actions centered-actions"><button class="secondary-btn" data-action="end-game">Pause beenden und weiterlernen</button></div>
+      <div class="actions centered-actions">${speechAvailable() ? '<button class="primary-btn" data-action="speak-break">🔊 Anweisung noch einmal vorlesen</button>' : '<span class="speech-unavailable">Sprachausgabe ist in diesem Browser nicht verfügbar.</span>'}<button class="secondary-btn" data-action="end-game">Pause beenden und weiterlernen</button></div>
     </section>`);
     timerHandle = setInterval(updateRestTimer, 1000);
     updateRestTimer();
@@ -878,6 +899,7 @@
 
   function endGameBreak() {
     clearInterval(timerHandle);
+    if (globalThis.speechSynthesis) globalThis.speechSynthesis.cancel();
     state.game = null;
     state.breakPrompt = null;
     state.view = state.session ? 'session' : 'home';
@@ -888,11 +910,20 @@
   function renderSession() {
     const session = state.session;
     const question = session.questions[session.index];
-    const selected = selectedFor(question.uid);
-    const checked = Boolean(session.checked[question.uid]);
+    const questionKey = sessionQuestionKey(question);
+    const selected = selectedForQuestion(question);
+    const checked = Boolean(session.checked[questionKey]);
     const correct = correctIndexes(question);
     const isRight = sameSet(selected, correct);
-    const percent = Math.round((session.index + 1) / session.questions.length * 100);
+    const breakBase = Math.max(0, Number(session.breakNextAtInSession || 50) - 50);
+    const percent = session.mode === 'path'
+      ? Math.max(0, Math.min(100, ((Number(session.breakAnsweredInSession || 0) - breakBase) / 50) * 100))
+      : Math.round((session.index + 1) / session.questions.length * 100);
+    const pathQuestionNumber = Math.max(1, Number(session.pathAnsweredTotal || 0) + (checked ? 0 : 1));
+    const untilBreak = Math.max(0, Number(session.breakNextAtInSession || 50) - Number(session.breakAnsweredInSession || 0));
+    const hintVisible = Boolean(session.hints?.[questionKey]);
+    const caratHelpVisible = Boolean(session.caratHelpShown?.[questionKey]);
+    const journeyModule = session.mode === 'path' ? LEARNING_PATH_MODULES.find(item => item.id === session.pathModuleId) : null;
 
     const answers = question.answers.map((answer, index) => {
       const isSelected = selected.includes(index);
@@ -912,17 +943,18 @@
         <span class="answer-letter">${String.fromCharCode(65 + index)}</span>
         <span class="answer-text">${esc(answer.text)}</span>
         ${badge ? `<span class="answer-badge ${answer.correct ? 'tag-ok' : 'tag-bad'}">${badge}</span>` : ''}
+        ${checked && answer.comment ? `<span class="answer-explanation"><strong>${answer.correct ? 'Warum richtig:' : 'Warum nicht:'}</strong> ${esc(answer.comment)}</span>` : ''}
       </label>`;
     }).join('');
 
     let feedback = '';
     if (checked) {
-      const comments = verifiedSourceNotes(question);
       feedback = `<div class="feedback ${isRight ? 'ok' : 'bad'}" role="status" aria-live="assertive">
         <div class="feedback-icon" aria-hidden="true">${isRight ? '✓' : '✕'}</div>
         <div><h3>${isRight ? 'RICHTIG' : 'FALSCH'}</h3>
-        <p>${isRight ? 'Deine Auswahl stimmt vollständig mit der hinterlegten Lösung überein.' : 'Deine Auswahl ist nicht vollständig korrekt. Grün kennzeichnet die richtige Lösung; Rot kennzeichnet eine falsch ausgewählte Antwort.'}</p>
-        ${comments.length ? `<div class="verified-evidence"><strong>Eindeutig hinterlegter Quellenbeleg:</strong><p>${esc(comments.join(' · '))}</p><div class="actions"><button class="mini-source-btn" data-action="document-search" data-source="iso">ISO prüfen</button><button class="mini-source-btn" data-action="document-search" data-source="modul1">Modul 1 prüfen</button><button class="mini-source-btn" data-action="document-search" data-source="modul2">Modul 2 prüfen</button></div></div>` : `<div class="unverified-evidence"><strong>Kein verifizierter Quellenbeleg hinterlegt.</strong><p>Aus Sicherheitsgründen wird für diese Frage keine Erklärung angezeigt.</p></div>`}</div>
+        <p>${isRight ? 'Deine Auswahl stimmt vollständig mit dem hinterlegten Lösungsschlüssel überein.' : 'Deine Auswahl ist nicht vollständig korrekt. Grün kennzeichnet richtige Lösungen; Rot kennzeichnet falsch ausgewählte Antworten.'}</p>
+        ${question.questionComment ? `<div class="solution-explanation"><strong>Erklärung:</strong><p>${esc(question.questionComment)}</p></div>` : ''}
+        </div>
       </div>`;
     }
 
@@ -932,7 +964,8 @@
         <div class="session-meta">
           <span class="pill strong-pill">${esc(session.label)}</span>
           <span class="pill">${esc(question.categoryName || question.testName)}</span>
-          <span class="pill">${session.index + 1} / ${session.questions.length}</span>
+          <span class="pill">${session.mode === 'path' ? `Lernreise · Szene ${esc(question.sellerSceneId || pathQuestionNumber)}` : session.mode === 'audit' ? `CARAT Tag ${question.caratChapter} · ${session.index + 1} / ${session.questions.length}` : `${session.index + 1} / ${session.questions.length}`}</span>
+          ${session.mode === 'path' && session.breakGameEnabled ? `<span class="pill">${untilBreak} bis Pause</span>` : ''}
         </div>
         ${isExam ? '<div class="timer" id="timer">0:00</div>' : ''}
       </div>
@@ -941,16 +974,22 @@
         <div class="question-label-row"><span class="question-id">Frage ${esc(question.displayId)}</span><span class="question-origin">${question.origin === 'custom' ? 'Eigene Datenbank' : 'Originaler Fragenbestand'}</span></div>
         <h2 class="question-text">${esc(question.question)}</h2>
         <div class="instruction">Eine oder mehrere Antworten können richtig sein.</div>
-        ${session.mode === 'path' ? `<aside class="learning-coach"><span>Lernbegleiter</span><p>${esc(learningCoachMessage(session))}</p></aside>` : ''}
+        ${session.mode === 'path' && journeyModule ? `<section class="journey-context-strip"><div><span>Etappe ${journeyModule.order}</span><strong>${esc(journeyModule.title)}</strong></div><div><span>Aktueller Ort</span><strong>${esc(question.sellerStation || journeyModule.station)}</strong></div><div><span>Entwicklung</span><strong>${esc(journeyModule.milestone)}</strong></div></section>` : ''}
+        ${session.mode === 'path' ? `<aside class="learning-coach seller-coach"><span>Verkaufsbegleiter</span><p>${esc(learningCoachMessage(session))}</p></aside>` : ''}
+        ${session.mode === 'audit' ? `<aside class="learning-coach audit-coach"><span>Auditorenbegleiter</span><p>${esc(auditCoachMessage(session))}</p></aside>` : ''}
+        ${session.mode === 'audit' && question.caratHelp && !checked ? `<div class="carat-question-help">${caratHelpVisible ? `<div><div class="carat-story-kicker">Hilfe · Auditszene ohne Lösung</div><p>${esc(question.caratHelp)}</p></div>` : '<p>Die neutrale Originalfrage bleibt unverändert. Öffne die CARAT-Szene nur, wenn du die abstrakte Formulierung in einer betrieblichen Beobachtung sehen möchtest.</p>'}<button class="secondary-btn" data-action="show-carat-help" ${caratHelpVisible ? 'disabled' : ''}>${caratHelpVisible ? 'CARAT-Szene geöffnet' : 'Im CARAT-Audit verstehen'}</button></div>` : ''}
+        ${session.mode === 'path' && (question.sellerHelp || question.pathHint) && !checked ? `<div class="path-question-help seller-question-help">${hintVisible ? `<div><strong>Hilfe ohne Lösung:</strong><p>${esc(question.sellerHelp || question.pathHint)}</p></div>` : '<p>Öffne eine Denkhilfe zur Verkaufssituation. Sie strukturiert die Aufgabe, nennt aber keine richtige Antwort.</p>'}<button class="secondary-btn" data-action="show-path-hint" ${hintVisible ? 'disabled' : ''}>${hintVisible ? 'Denkhilfe geöffnet' : 'Denkhilfe öffnen'}</button></div>` : ''}
         <div class="answers">${answers}</div>
         ${feedback}
+        ${session.mode === 'path' && checked ? `<section class="seller-story-resolution ${isRight ? 'story-right' : 'story-correction'}"><div class="seller-story-kicker">Verkäufer-Lernreise · Etappe ${question.sellerChapter || question.chapter} · Szene ${esc(question.sellerSceneId || question.displayId)}</div><h3>${isRight ? 'Deine Entscheidung trägt die Geschichte weiter' : 'Die Verkaufsszene korrigiert den Denkweg'}</h3><p>${esc(question.sellerStory || '')}</p>${!isRight ? '<p class="seller-correction-rule"><strong>Korrektur:</strong> Vergleiche deine Auswahl nacheinander mit den grün markierten Lösungen. Entscheidend ist der fachliche Zusammenhang – nicht die Position der Antwort.</p>' : ''}<div class="seller-memory-anchor"><strong>Gedächtnisanker:</strong> ${esc(question.sellerAnchor || '')}</div><div class="seller-next-milestone"><strong>Dein Weg:</strong> ${esc(question.sellerMilestone || journeyModule?.milestone || '')}</div></section>` : ''}
       </article>
       <div class="session-actions">
         <button class="secondary-btn" data-action="prev" ${session.index === 0 ? 'disabled' : ''}>← Zurück</button>
         <div class="spacer"></div>
         ${!isExam && !checked ? '<button class="primary-btn" data-action="check">Antwort prüfen</button>' : ''}
-        ${!isExam && checked ? `<button class="primary-btn" data-action="next">${session.index === session.questions.length - 1 ? 'Lernrunde beenden' : 'Nächste Frage →'}</button>` : ''}
-        ${isExam ? `<button class="secondary-btn" data-action="next" ${session.index === session.questions.length - 1 ? 'disabled' : ''}>Weiter →</button><button class="danger-btn" data-action="finish-exam">Prüfung abschließen</button>` : ''}
+        ${!isExam && checked ? `<button class="primary-btn" data-action="next">${session.mode === 'path' ? 'Nächste Szene →' : session.mode === 'audit' ? (session.index === session.questions.length - 1 ? 'Auditkapitel abschließen' : 'Audit fortsetzen →') : session.index === session.questions.length - 1 ? 'Lernrunde beenden' : 'Nächste Frage →'}</button>` : ''}
+        ${(session.mode === 'path' || session.mode === 'audit') ? `<button class="ghost-btn" data-action="pause-path">${session.mode === 'audit' ? 'Auditreise pausieren' : 'Lernreise pausieren'}</button>` : ''}
+        ${isExam ? `<button class="secondary-btn" data-action="next" ${session.index === session.questions.length - 1 ? 'disabled' : ''}>Weiter →</button><button class="danger-btn" data-action="finish-exam">Test abschließen</button>` : ''}
       </div>
     </div>`);
 
@@ -968,16 +1007,17 @@
   function toggleAnswer(index, checked) {
     const session = state.session;
     const question = session.questions[session.index];
-    if (session.checked[question.uid]) return;
-    const selected = new Set(session.selections[question.uid] || []);
+    const key = sessionQuestionKey(question);
+    if (session.checked[key]) return;
+    const selected = new Set(session.selections[key] || []);
     checked ? selected.add(index) : selected.delete(index);
-    session.selections[question.uid] = [...selected];
+    session.selections[key] = [...selected];
     saveActiveSession();
   }
 
   function recordAttempt(question, correct) {
     const session = state.session;
-    const selected = session?.selections?.[question.uid] || [];
+    const selected = session?.selections?.[sessionQuestionKey(question)] || [];
     const expected = correctIndexes(question);
     const responseSeconds = session?.currentQuestionStartedAt ? Math.max(0, Math.round((Date.now() - session.currentQuestionStartedAt) / 1000)) : 0;
     const stats = store.stats[question.uid] || {attempts: 0, correct: 0, wrong: 0};
@@ -996,6 +1036,19 @@
     if (session) {
       if (correct) session.correctInSession = Number(session.correctInSession || 0) + 1;
       else session.wrongInSession = Number(session.wrongInSession || 0) + 1;
+      if (session.mode === 'path' && session.pathModuleId) {
+        session.pathAnsweredTotal = Number(session.pathAnsweredTotal || 0) + 1;
+        const progress = store.learningPathProgress[session.pathModuleId] || {};
+        const attempts = Number(progress.attempts || 0) + 1;
+        const correctAnswers = Number(progress.correct || 0) + (correct ? 1 : 0);
+        store.learningPathProgress[session.pathModuleId] = {
+          ...progress,
+          startedAt: progress.startedAt || new Date().toISOString(),
+          lastAt: new Date().toISOString(),
+          attempts,
+          correct: correctAnswers
+        };
+      }
     }
     saveStore();
   }
@@ -1003,20 +1056,54 @@
   function checkLearning() {
     const session = state.session;
     const question = session.questions[session.index];
-    if (session.checked[question.uid]) return;
-    session.checked[question.uid] = true;
-    recordAttempt(question, sameSet(selectedFor(question.uid), correctIndexes(question)));
+    const key = sessionQuestionKey(question);
+    if (session.checked[key]) return;
+    session.checked[key] = true;
+    recordAttempt(question, sameSet(selectedForQuestion(question), correctIndexes(question)));
     saveActiveSession();
     if (registerAnsweredQuestion(question)) return;
     render();
   }
 
+  function continueLearningPath(session) {
+    const module = LEARNING_PATH_MODULES.find(item => item.id === session.pathModuleId);
+    const pool = module
+      ? questionsForLearningModule(module)
+      : (session.pathPoolUids || []).map(uid => getQuestionByUid(uid)).filter(Boolean);
+    if (!pool.length) {
+      toast('Für diesen Lernpfad sind keine weiteren Fragen verfügbar.');
+      return;
+    }
+    const nextCycle = Number(session.pathCycle || 1) + 1;
+    const nextQuestions = prepareQuestionsForSession('path', pool, {
+      random: false,
+      runId: session.sessionRunId || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      cycle: nextCycle
+    });
+    session.questions = nextQuestions;
+    session.index = 0;
+    session.selections = {};
+    session.checked = {};
+    session.hints = {};
+    session.completedUids = [];
+    session.pathCycle = nextCycle;
+    session.currentQuestionStartedAt = Date.now();
+    saveActiveSession();
+    render();
+    toast('Der Lernpfad läuft ohne Unterbrechung mit neu gemischten Antworten weiter.');
+  }
+
   function nextQuestion() {
     const session = state.session;
     const current = session.questions[session.index];
-    if (session.mode === 'exam' && (session.selections[current.uid] || []).length && registerAnsweredQuestion(current)) return;
+    const currentKey = sessionQuestionKey(current);
+    if (session.mode === 'exam' && (session.selections[currentKey] || []).length && registerAnsweredQuestion(current)) return;
     if (session.index >= session.questions.length - 1) {
       if (session.mode === 'exam') return;
+      if (session.mode === 'path') {
+        continueLearningPath(session);
+        return;
+      }
       completeLearningSession();
       state.view = 'home';
       state.session = null;
@@ -1042,13 +1129,21 @@
 
   function completeLearningSession() {
     const session = state.session;
+    if (session?.mode === 'audit' && session.auditChapterId) {
+      const answeredNow = Object.keys(session.checked || {}).length;
+      const oldProgress = store.auditJourneyProgress[session.auditChapterId] || {};
+      store.auditJourneyProgress[session.auditChapterId] = {...oldProgress, startedAt: oldProgress.startedAt || new Date().toISOString(), lastAt: new Date().toISOString(), completed: answeredNow >= session.questions.length};
+      store.auditJourneyLastChapter = session.auditChapterId;
+    }
     if (session?.mode === 'path' && session.pathModuleId) {
       const answeredNow = Object.keys(session.checked || {}).length;
       const ratio = answeredNow ? Number(session.correctInSession || 0) / answeredNow : 0;
+      const oldProgress = store.learningPathProgress[session.pathModuleId] || {};
       store.learningPathProgress[session.pathModuleId] = {
-        ...(store.learningPathProgress[session.pathModuleId] || {}),
-        startedAt: store.learningPathProgress[session.pathModuleId]?.startedAt || new Date().toISOString(),
-        lastAt: new Date().toISOString(), completed: answeredNow >= 6 && ratio >= .7
+        ...oldProgress,
+        startedAt: oldProgress.startedAt || new Date().toISOString(),
+        lastAt: new Date().toISOString(),
+        completed: oldProgress.completed || (answeredNow >= 6 && ratio >= .7)
       };
       store.learningPathLastModule = session.pathModuleId;
     }
@@ -1066,11 +1161,13 @@
 
   function finishExam() {
     const session = state.session;
-    const unanswered = session.questions.filter(question => (session.selections[question.uid] || []).length === 0).length;
-    if (unanswered && !confirm(`${unanswered} Frage(n) sind noch unbeantwortet. Prüfung trotzdem abschließen?`)) return;
+    const unanswered = session.questions.filter(question => (session.selections[sessionQuestionKey(question)] || []).length === 0).length;
+    if (unanswered && !confirm(`${unanswered} Frage(n) sind noch unbeantwortet. Test trotzdem abschließen?`)) return;
     session.questions.forEach(question => {
-      if ((session.selections[question.uid] || []).length && !session.completedUids.includes(question.uid)) {
-        session.completedUids.push(question.uid);
+      const key = sessionQuestionKey(question);
+      if ((session.selections[key] || []).length && !session.completedUids.includes(key)) {
+        session.completedUids.push(key);
+        session.breakAnsweredInSession = Number(session.breakAnsweredInSession || 0) + 1;
         store.breakAnsweredTotal = Number(store.breakAnsweredTotal || 0) + 1;
       }
     });
@@ -1078,8 +1175,8 @@
     session.endedAt = Date.now();
     session.results = session.questions.map(question => ({
       q: question,
-      selected: session.selections[question.uid] || [],
-      correct: sameSet(session.selections[question.uid] || [], correctIndexes(question))
+      selected: session.selections[sessionQuestionKey(question)] || [],
+      correct: sameSet(session.selections[sessionQuestionKey(question)] || [], correctIndexes(question))
     }));
     session.results.forEach(result => recordAttempt(result.q, result.correct));
     const right = session.results.filter(result => result.correct).length;
@@ -1128,7 +1225,7 @@
     app.innerHTML = layout(`<div class="session-wrap">
       <section class="result-hero ${passed ? 'result-pass' : 'result-fail'}">
         <div class="score-ring" style="--score:${percent * 3.6}deg;--score-color:${passed ? 'var(--ok)' : 'var(--bad)'}"><strong>${percent}%</strong></div>
-        <div class="eyebrow">Prüfung beendet</div>
+        <div class="eyebrow">Test beendet</div>
         <h1 class="${passed ? 'pass' : 'fail'}">${passed ? 'BESTANDEN' : 'NICHT BESTANDEN'}</h1>
         <p>Bestehensgrenze: ${session.threshold}%</p>
         <div class="result-grid">
@@ -1139,7 +1236,7 @@
         </div>
         <div class="actions centered">
           <button class="primary-btn" data-action="repeat-result-wrong" ${wrong ? '' : 'disabled'}>Fehlerfragen wiederholen</button>
-          <button class="secondary-btn" data-action="new-exam">Neue Prüfung</button>
+          <button class="secondary-btn" data-action="new-exam">Neuer Test</button>
           <button class="ghost-btn" data-action="home">Startseite</button>
         </div>
       </section>
@@ -1167,14 +1264,16 @@
       row.seconds += Number(item.responseSeconds || 0);
       fieldMap.set(key, row);
     });
-    const fields = [...fieldMap.values()].sort((a,b) => a.name.localeCompare(b.name, 'de'));
+    const fields = [...fieldMap.values()].sort((a,b) => {
+      const aPct = a.attempts ? a.correct / a.attempts : 1;
+      const bPct = b.attempts ? b.correct / b.attempts : 1;
+      return (aPct - bPct) || ((b.attempts-b.correct) - (a.attempts-a.correct)) || a.name.localeCompare(b.name, 'de', {numeric:true});
+    });
     const fieldRows = fields.map(row => {
       const pct = row.attempts ? Math.round(row.correct / row.attempts * 100) : 0;
-      let tendency = 'ausgeglichen';
-      if (row.over > row.under * 1.35 && row.over >= 3) tendency = 'häufig zu viele Antworten';
-      else if (row.under > row.over * 1.35 && row.under >= 3) tendency = 'häufig zu wenige Antworten';
       const avg = row.attempts ? Math.round(row.seconds / row.attempts) : 0;
-      return `<tr><td><strong>${esc(row.name)}</strong></td><td>${row.attempts}</td><td>${pct}%</td><td>${row.attempts-row.correct}</td><td>${esc(tendency)}</td><td>${fmtTime(avg)}</td></tr>`;
+      const tendency = `${row.over}× zu viele · ${row.under}× zu wenige · ${row.exact}× gleiche Anzahl`;
+      return `<tr><td><strong>${esc(row.name)}</strong></td><td>${row.attempts}</td><td>${pct}%</td><td>${row.attempts-row.correct}</td><td><strong>${row.over}</strong></td><td><strong>${row.under}</strong></td><td>${row.exact}</td><td><span class="tendency-detail">${esc(tendency)}</span></td><td>${fmtTime(avg)}</td></tr>`;
     }).join('');
     const hard = Object.entries(store.stats || {}).map(([uid, st]) => {
       const q = getQuestionByUid(uid, true);
@@ -1188,9 +1287,9 @@
 
     app.innerHTML = layout(`<div class="statistics-page">
       <section class="page-hero compact-hero"><div><div class="eyebrow">Lernanalyse</div><h1>Aktuelle und langfristige Statistik</h1><p class="lead">Die Auswertung zeigt nicht nur Ergebnisse, sondern erkennt Fehlerschwerpunkte und Antwortneigungen in den einzelnen Lernfeldern.</p></div></section>
-      ${active ? `<section class="current-session-stat"><div><div class="eyebrow">Aktueller Durchgang</div><h2>${esc(active.label || 'Lernrunde')}</h2><p>Position ${Math.min((active.index||0)+1, active.questions?.length||0)} von ${active.questions?.length||0} · ${activeAnswered} beantwortet · ${Number(active.correctInSession||0)} richtig · ${Number(active.wrongInSession||0)} falsch</p></div><button class="primary-btn" data-action="resume-session">Fortsetzen</button></section>` : '<section class="current-session-stat empty-current"><strong>Aktuell ist kein unterbrochener Durchgang gespeichert.</strong></section>'}
+      ${active ? `<section class="current-session-stat"><div><div class="eyebrow">Aktueller Durchgang</div><h2>${esc(active.label || 'Lernrunde')}</h2><p>${active.mode === 'path' ? `Fortlaufend · ${Number(active.pathAnsweredTotal || 0)} beantwortet` : `Position ${Math.min((active.index||0)+1, active.questions?.length||0)} von ${active.questions?.length||0}`} · ${Number(active.correctInSession||0)} richtig · ${Number(active.wrongInSession||0)} falsch</p></div><button class="primary-btn" data-action="resume-session">Fortsetzen</button></section>` : '<section class="current-session-stat empty-current"><strong>Aktuell ist kein unterbrochener Durchgang gespeichert.</strong></section>'}
       <section class="stats statistics-summary"><div class="stat"><div class="stat-icon">Σ</div><div><strong>${total}</strong><span>Antworten langfristig</span></div></div><div class="stat"><div class="stat-icon">%</div><div><strong>${accuracy}%</strong><span>Gesamttrefferquote</span></div></div><div class="stat"><div class="stat-icon">↻</div><div><strong>${sessions.length}</strong><span>gespeicherte Durchläufe</span></div></div><div class="stat"><div class="stat-icon">◷</div><div><strong>${fmtTime(totalSeconds)}</strong><span>erfasste Lernzeit</span></div></div></section>
-      <section class="section-block"><div class="section-heading"><div><div class="eyebrow">Auswertung nach Lernfeld</div><h2>Fehler und Neigungen</h2></div></div><div class="table-scroll"><table class="analytics-table"><thead><tr><th>Lernfeld</th><th>Antworten</th><th>Trefferquote</th><th>Fehler</th><th>erkannte Neigung</th><th>Ø Zeit</th></tr></thead><tbody>${fieldRows || '<tr><td colspan="6">Noch keine Daten vorhanden.</td></tr>'}</tbody></table></div></section>
+      <section class="section-block"><div class="section-heading"><div><div class="eyebrow">Auswertung nach Lernfeld</div><h2>Fehler und Antwortanzahl – exakt gezählt</h2><p class="section-note">Die schwierigsten Lernfelder stehen zuerst. „Gleiche Anzahl“ bedeutet nur, dass gleich viele Antworten wie erforderlich markiert wurden; die Auswahl kann trotzdem inhaltlich falsch gewesen sein.</p></div></div><div class="table-scroll"><table class="analytics-table exact-stat-table"><thead><tr><th>Lernfeld</th><th>Antworten</th><th>Trefferquote</th><th>Fehler</th><th>Zu viel</th><th>Zu wenig</th><th>Gleiche Anzahl</th><th>Exakte Häufigkeit</th><th>Ø Zeit</th></tr></thead><tbody>${fieldRows || '<tr><td colspan="9">Noch keine Daten vorhanden.</td></tr>'}</tbody></table></div></section>
       <section class="section-block"><div class="section-heading"><div><div class="eyebrow">Fehlerschwerpunkte</div><h2>Schwierigste Fragen</h2></div></div><div class="table-scroll"><table class="analytics-table"><thead><tr><th>Frage</th><th>Lernfeld</th><th>Versuche</th><th>Fehler</th><th>Quote</th></tr></thead><tbody>${hardRows || '<tr><td colspan="5">Noch keine Daten vorhanden.</td></tr>'}</tbody></table></div></section>
       <section class="section-block"><div class="section-heading"><div><div class="eyebrow">Verlauf</div><h2>Letzte Durchläufe</h2></div></div><div class="table-scroll"><table class="analytics-table"><thead><tr><th>Datum</th><th>Durchgang</th><th>Fragen</th><th>Ergebnis</th><th>Zeit</th></tr></thead><tbody>${recentSessions || '<tr><td colspan="5">Noch keine abgeschlossenen Durchläufe.</td></tr>'}</tbody></table></div></section>
     </div>`);
@@ -1198,58 +1297,13 @@
 
   function renderInfo() {
     app.innerHTML = layout(`<div class="info-page">
-      <section class="page-hero compact-hero">
-        <div>
-          <div class="eyebrow">Transparenz</div>
-          <h1>Urheberschaft, KI-Unterstützung & Datenschutz</h1>
-          <p class="lead">Klare Informationen zur fachlichen Grundlage, zur technischen Erstellung und zur lokalen Datenverarbeitung dieser App.</p>
-        </div>
-        <div class="page-hero-badge">Lokal<span>ohne Cloud-Zwang</span></div>
-      </section>
-
+      <section class="page-hero compact-hero"><div><div class="eyebrow">Transparenz</div><h1>Urheberschaft, KI-Unterstützung & Datenschutz</h1><p class="lead">Informationen zur Fragenbasis, technischen Umsetzung und lokalen Datenverarbeitung des Verkäufertrainers.</p></div><div class="page-hero-badge">Lokal<span>ohne Cloud-Zwang</span></div></section>
       <div class="info-grid">
-        <article class="info-card">
-          <h2>Grundlage und Urheberschaft</h2>
-          <p><strong>Ersteller der ursprünglichen Excel-Fragensammlung:</strong> Teichi.</p>
-          <p><strong>Fachliche Betreuung des QMB-Lehrgangs:</strong> Bettina Walker.</p>
-          <p><strong>Konzept, Produktidee und Projektleitung:</strong> Christian Nitzsche.</p>
-          <p><strong>Technische Umsetzung und KI-Unterstützung:</strong> OpenAI ChatGPT – für Programmierung, Gestaltung und Strukturierung.</p>
-          <div class="inspiration-note"><strong>Didaktische Inspiration des Lernpfads</strong><p>Der eigenständig entwickelte Lernpfad wurde durch öffentlich vermittelte Lernideen von <strong>Ricardo Leppe</strong> inspiriert. Ricardo Leppe war weder an der Entwicklung der App noch an der Erstellung, Prüfung oder Freigabe ihrer fachlichen Inhalte beteiligt.</p></div>
-          <p>Die KI-Unterstützung wurde bei der Erstellung der App eingesetzt. Während der normalen Nutzung besteht keine Verbindung zu einem KI-Dienst; Fragen, Antworten und Lernergebnisse werden nicht an eine KI übermittelt.</p>
-        </article>
-
-        <article class="info-card privacy">
-          <h2>Datenschutzfreundliche lokale Verarbeitung</h2>
-          <p>Die App benötigt keine Registrierung und fragt weder Namen noch E-Mail-Adresse ab. Für die ausdrücklich gewünschten Funktionen speichert sie ausschließlich auf dem verwendeten Gerät beziehungsweise im Browser:</p>
-          <ul>
-            <li>Lernstand, Fehlerliste, Statistiken und Prüfungshistorie,</li>
-            <li>Darstellungs- und Prüfungseinstellungen,</li>
-            <li>eigene Fragen, Kategorien, Bearbeitungen und ausgeblendete Fragen.</li>
-          </ul>
-          <p>Die Speicherung erfolgt im lokalen Browserspeicher (<em>Local Storage</em>). Es gibt keine automatische Übermittlung an die genannten Ersteller oder Betreuer, einen KI-Anbieter oder sonstige Dritte.</p>
-          <div class="info-badge-row">
-            <span class="info-badge">keine Benutzerkonten</span>
-            <span class="info-badge">keine Werbung</span>
-            <span class="info-badge">keine Analyse- oder Trackingdienste</span>
-            <span class="info-badge">keine externen Schriftarten</span>
-            <span class="info-badge">kein Kamera-, Mikrofon- oder Standortzugriff</span>
-          </div>
-        </article>
-
-        <article class="info-card">
-          <h2>Export, Import und Löschung</h2>
-          <p>Eine Datenübertragung findet nur statt, wenn du selbst eine Sicherungsdatei exportierst, weitergibst oder importierst. Diese Dateien können eigene Inhalte enthalten und sollten entsprechend geschützt aufbewahrt werden.</p>
-          <p>Den Lernstand kannst du auf der Startseite zurücksetzen. Mit der folgenden Funktion werden sämtliche lokal gespeicherten App-Daten einschließlich eigener Fragen, Kategorien und Bearbeitungen gelöscht; die eingebettete ursprüngliche Fragenbasis bleibt Bestandteil der App-Datei.</p>
-          <div class="actions"><button class="danger-btn" type="button" data-action="delete-all-local-data">Alle lokalen App-Daten löschen</button></div>
-        </article>
-
-        <article class="info-card warning">
-          <h2>Hinweis bei öffentlicher Bereitstellung</h2>
-          <p>Diese herunterladbare lokale Version sendet selbst keine Nutzungsdaten an einen Server. Wird die App später auf einer Website oder über einen App-Store veröffentlicht, können jedoch durch Hosting, Server-Protokolle, Updates oder Store-Dienste zusätzliche Datenverarbeitungen entstehen.</p>
-          <p>Vor einer öffentlichen oder gewerblichen Veröffentlichung müssen deshalb insbesondere die verantwortliche Stelle mit Kontaktdaten, Hostinganbieter, Zwecke, Rechtsgrundlagen, Speicherdauer, Empfänger und Betroffenenrechte konkret ergänzt und rechtlich geprüft werden. Diese technische Datenschutzinformation ersetzt keine individuelle Rechtsberatung.</p>
-        </article>
-      </div>
-      <div class="actions centered"><button class="primary-btn" type="button" data-action="home">Zur Startseite</button></div>
+        <article class="info-card"><h2>Grundlage und Umsetzung</h2><p><strong>Fragenbasis:</strong> Excel-Arbeitsmappe „Multiple Choice Kapitel 1 bis 23“ mit 920 Fragen.</p><p><strong>Konzept und Projektleitung:</strong> Christian Nitzsche.</p><p><strong>Technische Umsetzung und KI-Unterstützung:</strong> OpenAI ChatGPT für Programmierung, Gestaltung und Strukturierung.</p><p>Während der normalen Nutzung besteht keine Verbindung zu einem KI-Dienst; Fragen, Antworten und Lernergebnisse werden nicht an eine KI übermittelt.</p></article>
+        <article class="info-card privacy"><h2>Datenschutzfreundliche lokale Verarbeitung</h2><p>Die App benötigt keine Registrierung. Sie speichert Lernstand, Fehlerliste, Statistiken, Testhistorie, Einstellungen sowie eigene Bearbeitungen ausschließlich im lokalen Browserspeicher.</p><div class="info-badge-row"><span class="info-badge">keine Benutzerkonten</span><span class="info-badge">keine Werbung</span><span class="info-badge">keine Trackingdienste</span><span class="info-badge">keine externen Schriftarten</span></div></article>
+        <article class="info-card"><h2>Export, Import und Löschung</h2><p>Daten werden nur übertragen, wenn du selbst eine Sicherungsdatei exportierst, weitergibst oder importierst. Die eingebettete Fragenbasis bleibt Bestandteil der App.</p><div class="actions"><button class="danger-btn" type="button" data-action="delete-all-local-data">Alle lokalen App-Daten löschen</button></div></article>
+        <article class="info-card warning"><h2>Hinweis bei öffentlicher Bereitstellung</h2><p>Diese lokale Version sendet keine Nutzungsdaten an einen Server. Bei einer späteren Veröffentlichung über Website oder App-Store müssen Hosting, Verantwortlichkeit und Datenschutzangaben gesondert geprüft und ergänzt werden.</p></article>
+      </div><div class="actions centered"><button class="primary-btn" type="button" data-action="home">Zur Startseite</button></div>
     </div>`);
   }
 
@@ -1306,7 +1360,7 @@
     const archivedCount = (store.archivedIds || []).length;
     const editingQuestion = state.editingUid ? getQuestionByUid(state.editingUid, true) : null;
     const formQuestion = editingQuestion || {
-      categoryId: getCategories()[0]?.id || 'test-1', categoryName: getCategories()[0]?.name || 'Test 1',
+      categoryId: getCategories()[0]?.id || 'kapitel-1', categoryName: getCategories()[0]?.name || 'Kapitel 1',
       displayId: '', question: '', questionComment: '', answers: [blankAnswer(0), blankAnswer(1), blankAnswer(2)]
     };
 
@@ -1535,7 +1589,7 @@
       store.wrongIds = store.wrongIds.filter(id => id !== uid);
       toast('Eigene Frage wurde gelöscht.');
     } else {
-      if (!confirm('Diese Originalfrage aus Lernmodus, Prüfung und Katalog ausblenden? Sie kann später wiederhergestellt werden.')) return;
+      if (!confirm('Diese Originalfrage aus Lernmodus, Test und Katalog ausblenden? Sie kann später wiederhergestellt werden.')) return;
       store.archivedIds = [...new Set([...(store.archivedIds || []), uid])];
       store.wrongIds = store.wrongIds.filter(id => id !== uid);
       toast('Originalfrage wurde ausgeblendet.');
@@ -1556,7 +1610,7 @@
 
   function exportDatabase() {
     const payload = {
-      app: 'QMB Prüfungstrainer',
+      app: 'Verkäufertrainer',
       schemaVersion: APP_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       baseQuestionCount: BASE_QUESTIONS.length,
@@ -1572,7 +1626,7 @@
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `QMB_Lernplattform_Datenbank_${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.download = `Verkaeufertrainer_Datenbank_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -1593,7 +1647,7 @@
       const payload = JSON.parse(text);
       const database = payload.database || payload;
       if (!database || !Array.isArray(database.customQuestions) || typeof database.overrides !== 'object') {
-        throw new Error('Die Datei ist keine gültige QMB-Lernplattform-Datensicherung.');
+        throw new Error('Die Datei ist keine gültige Verkäufertrainer-Datensicherung.');
       }
       const mode = document.getElementById('importMode')?.value || 'merge';
       if (mode === 'replace') {
@@ -1629,7 +1683,7 @@
 
 
   function deleteAllLocalData() {
-    const accepted = confirm('Wirklich sämtliche lokal gespeicherten App-Daten löschen? Dazu gehören Lernstand, Prüfungshistorie, eigene Fragen, Kategorien und Bearbeitungen. Dieser Schritt kann nur über eine zuvor exportierte Sicherung rückgängig gemacht werden.');
+    const accepted = confirm('Wirklich sämtliche lokal gespeicherten App-Daten löschen? Dazu gehören Lernstand, Testhistorie, eigene Fragen, Kategorien und Bearbeitungen. Dieser Schritt kann nur über eine zuvor exportierte Sicherung rückgängig gemacht werden.');
     if (!accepted) return;
     localStorage.removeItem(STORE_KEY);
     store = {...defaultStore};
@@ -1648,7 +1702,9 @@
     openBookSource: null,
     openBookIndex: 0,
     openBookFeedback: null,
-    openBookStartedAt: null
+    openBookStartedAt: null,
+    openBookHelpVisible: false,
+    openBookDifficulty: 'easy'
     };
     document.documentElement.dataset.theme = store.theme;
     render();
@@ -1656,7 +1712,7 @@
   }
 
   function resetProgress() {
-    if (!confirm('Lernstand, Fehlerliste und Prüfungshistorie wirklich löschen? Die Fragendatenbank bleibt erhalten.')) return;
+    if (!confirm('Lernstand, Fehlerliste und Testhistorie wirklich löschen? Die Fragendatenbank bleibt erhalten.')) return;
     store.wrongIds = [];
     store.stats = {};
     store.history = [];
@@ -1664,6 +1720,9 @@
     store.sessionHistory = [];
     store.activeSession = null;
     store.learningPathProgress = {};
+    store.auditJourneyProgress = {};
+    store.auditJourneyLastChapter = null;
+    store.auditHelpUsage = {};
     store.openBookProgress = {};
     store.openBookHistory = [];
     store.learningPathLastModule = null;
@@ -1708,6 +1767,8 @@
       toast(store.breakGameEnabled ? 'Minispiel-Pause eingeschaltet.' : 'Minispiel-Pause ausgeschaltet.');
     }
     if (event.target.id === 'databaseImport') importDatabase(event.target.files?.[0]);
+    if (event.target.id === 'openBookConfidence') { const q=currentOpenBookQuestion(); if(q){ const old=store.openBookProgress[q.id]||{}; store.openBookProgress[q.id]={...old,confidence:event.target.value}; saveStore(); } }
+
   });
 
   document.addEventListener('input', event => {
@@ -1715,6 +1776,7 @@
       state.catalogQuery = event.target.value;
       updateCatalogResults();
     }
+    if (event.target.id === 'openBookTransfer') { const q=currentOpenBookQuestion(); if(q){store.openBookReflections[q.id]=event.target.value; saveStore();} }
     if (event.target.id === 'managerSearch') {
       state.managerQuery = event.target.value;
       updateManagerResults();
@@ -1726,21 +1788,79 @@
     if (!button) return;
     const action = button.dataset.action;
 
-    if (action === 'start-openbook') {
+    if (action === 'set-openbook-difficulty') {
+      state.openBookDifficulty = button.dataset.level || 'easy'; store.openBookDifficulty = state.openBookDifficulty; saveStore(); render();
+    } else if (action === 'openbook-help') {
+      const q=currentOpenBookQuestion(); state.openBookHelpVisible=true; if(q){store.openBookHelpUsage[q.id]=(store.openBookHelpUsage[q.id]||0)+1; saveStore();} render();
+    } else if (action === 'start-openbook') {
       state.openBookSource = button.dataset.source || 'iso';
       const module=OPEN_BOOK_MODULES[state.openBookSource];
       const firstUnsolved=module.questions.findIndex(q=>openBookQuestionStats(q.id).correct===0);
-      state.openBookIndex=firstUnsolved>=0?firstUnsolved:0; state.openBookFeedback=null; state.openBookStartedAt=Date.now(); state.view='openBookQuestion'; render();
+      state.openBookIndex=firstUnsolved>=0?firstUnsolved:0; state.openBookFeedback=null; state.openBookHelpVisible=false; state.openBookDifficulty=store.openBookDifficulty||'easy'; state.openBookStartedAt=Date.now(); state.view='openBookQuestion'; render();
     } else if (action === 'openbook-home') {
-      state.openBookFeedback=null; state.view='openBookHome'; render();
+      state.openBookFeedback=null; state.openBookHelpVisible=false; state.view='openBookHome'; render();
     } else if (action === 'next-openbook') {
-      const module=OPEN_BOOK_MODULES[state.openBookSource]; state.openBookIndex=(state.openBookIndex+1)%module.questions.length; state.openBookFeedback=null; state.openBookStartedAt=Date.now(); render();
+      const module=OPEN_BOOK_MODULES[state.openBookSource]; state.openBookIndex=(state.openBookIndex+1)%module.questions.length; state.openBookFeedback=null; state.openBookHelpVisible=false; state.openBookStartedAt=Date.now(); render();
     } else if (action === 'document-search') {
       state.documentSearchSource = button.dataset.source || 'iso';
       state.view = 'documentSearch'; render();
     } else if (action === 'select-document-search') {
       state.documentSearchSource = button.dataset.source || 'iso';
       render();
+    } else if (action === 'resume-session') {
+      event.preventDefault();
+      button.disabled = true;
+      if (restoreActiveSession()) {
+        render();
+        toast('Der gespeicherte Durchgang wurde exakt fortgesetzt.');
+      } else {
+        state.view = 'home'; render(); toast('Der gespeicherte Durchgang ist unvollständig oder nicht mehr vorhanden.');
+      }
+    } else if (action === 'discard-session') {
+      event.preventDefault();
+      button.disabled = true;
+      discardActiveSession();
+      render();
+      toast('Gespeicherter Durchgang wurde vollständig verworfen.');
+    } else if (action === 'audit-journey') {
+      if (state.session && !state.session.endedAt) saveActiveSession();
+      state.view = 'auditJourney'; render();
+    } else if (action === 'start-audit-chapter') {
+      const chapter = CARAT_AUDIT_CHAPTERS.find(ch => Number(ch.number) === Number(button.dataset.chapter));
+      if (!chapter) return;
+      const pool = questionsForAuditChapter(chapter);
+      store.auditJourneyProgress[chapter.id] = {...(store.auditJourneyProgress[chapter.id] || {}), startedAt: store.auditJourneyProgress[chapter.id]?.startedAt || new Date().toISOString(), lastAt: new Date().toISOString()};
+      store.auditJourneyLastChapter = chapter.id; saveStore();
+      requestSessionStart('audit', pool, {random:false, label:`CARAT Auditreise · Tag ${chapter.number}: ${chapter.title}`, auditChapterId:chapter.id, auditChapterNumber:chapter.number});
+    } else if (action === 'open-audit-docs') {
+      document.querySelector('.audit-documents')?.scrollIntoView({behavior:'smooth'});
+    } else if (action === 'show-carat-help') {
+      const question = state.session?.questions?.[state.session.index];
+      if (question) {
+        const key = sessionQuestionKey(question);
+        state.session.caratHelpShown = state.session.caratHelpShown || {};
+        state.session.caratHelpShown[key] = true;
+        store.auditHelpUsage[question.uid] = Number(store.auditHelpUsage[question.uid] || 0) + 1;
+        saveActiveSession(); render();
+      }
+    } else if (action === 'show-path-hint') {
+      const question = state.session?.questions?.[state.session.index];
+      if (question) {
+        const key = sessionQuestionKey(question);
+        state.session.hints = state.session.hints || {};
+        state.session.hints[key] = true;
+        store.pathHelpUsage[question.uid] = Number(store.pathHelpUsage[question.uid] || 0) + 1;
+        saveActiveSession();
+        render();
+      }
+    } else if (action === 'speak-break') {
+      if (!speakInstruction(currentRestInstruction())) toast('Sprachausgabe ist in diesem Browser nicht verfügbar.');
+    } else if (action === 'pause-path') {
+      saveActiveSession();
+      const auditMode = state.session?.mode === 'audit';
+      state.view = auditMode ? 'auditJourney' : 'learningPath';
+      render();
+      toast(auditMode ? 'Auditreise pausiert. Du kannst genau hier fortsetzen.' : 'Lernreise pausiert. Die genaue Szene ist gespeichert.');
     } else if (action === 'learning-path') {
       if (state.session && !state.session.endedAt) saveActiveSession();
       state.view = 'learningPath'; render();
@@ -1750,7 +1870,7 @@
       store.learningPathProgress[module.id] = {...(store.learningPathProgress[module.id]||{}), startedAt:(store.learningPathProgress[module.id]?.startedAt||new Date().toISOString()), lastAt:new Date().toISOString()};
       store.learningPathLastModule = module.id; saveStore();
       const pool = questionsForLearningModule(module);
-      requestSessionStart('path', pool, {random:true, count:Math.min(12,pool.length), label:`Lernpfad · ${module.title}`, pathModuleId:module.id});
+      requestSessionStart('path', pool, {random:false, label:`Verkäufer-Lernreise · Etappe ${module.order}: ${module.title}`, pathModuleId:module.id});
     } else if (action === 'open-path-docs') {
       document.querySelector('.path-documents')?.scrollIntoView({behavior:'smooth'});
     } else if (action === 'confirm-start') {
@@ -1763,11 +1883,12 @@
       saveStore();
       startSession(pending.mode, pending.pool, {...pending.options, breakGameEnabled: useBreaks, breakDurationMinutes: duration});
     } else if (action === 'cancel-start') {
+      const pendingMode = state.pendingSession?.mode;
       state.pendingSession = null;
-      state.view = 'home';
+      state.view = pendingMode === 'audit' ? 'auditJourney' : pendingMode === 'path' ? 'learningPath' : 'home';
       render();
     } else if (action === 'test-break') {
-      state.breakPrompt = {returnView: state.session ? 'session' : 'home', milestone: store.breakAnsweredTotal, moduleIndex: Number(store.breakRotationIndex || 0) % BREAK_MODULES.length};
+      state.breakPrompt = {returnView: state.session ? 'session' : 'home', milestone: state.session?.breakAnsweredInSession || 0, moduleIndex: Number(store.breakRotationIndex || 0) % BREAK_MODULES.length};
       state.view = 'breakPrompt'; render();
     } else if (action === 'start-game') {
       startGameBreak(Number(button.dataset.minutes) || 2);
@@ -1785,7 +1906,7 @@
     } else if (action === 'install' && deferredInstall) {
       deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; render();
     } else if (action === 'start-quick-exam') {
-      requestSessionStart('exam', getAllQuestions(), {count: 45, threshold: store.passThreshold || 70, label: 'Prüfung · 45 Fragen'});
+      requestSessionStart('exam', getAllQuestions(), {count: 45, threshold: store.passThreshold || 70, label: 'Test · 45 Fragen'});
     } else if (action === 'start-learn') {
       const category = document.getElementById('learnCategory').value;
       const random = document.getElementById('learnOrder').value === 'random';
@@ -1798,7 +1919,7 @@
       const pool = poolFor(category);
       const count = Math.max(1, Math.min(Number(document.getElementById('examCount').value) || 45, pool.length));
       const threshold = Math.max(1, Math.min(Number(document.getElementById('passThreshold').value) || 70, 100));
-      const label = category === 'all' ? `Prüfung · ${count} Fragen` : `Prüfung · ${getCategories().find(item => item.id === category)?.name || category}`;
+      const label = category === 'all' ? `Test · ${count} Fragen` : `Test · ${getCategories().find(item => item.id === category)?.name || category}`;
       requestSessionStart('exam', pool, {count, threshold, label});
     } else if (action === 'check') {
       checkLearning();
@@ -1824,7 +1945,7 @@
       deleteAllLocalData();
     } else if (action === 'repeat-result-wrong') {
       const wrong = state.session.results.filter(result => !result.correct).map(result => result.q);
-      requestSessionStart('review', wrong, {random: false, label: 'Fehler aus letzter Prüfung'});
+      requestSessionStart('review', wrong, {random: false, label: 'Fehler aus letztem Test'});
     } else if (action === 'new-exam') {
       state.view = 'home'; state.session = null; render();
       setTimeout(() => document.getElementById('examCategory')?.focus(), 0);

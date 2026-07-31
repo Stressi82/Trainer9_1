@@ -1,8 +1,8 @@
 {
-  "id": "./?v=9.1",
-  "name": "QMB Lernplattform",
-  "short_name": "QMB Lernen",
-  "description": "QMB Lernplattform mit Prüfungstrainer, Dokumenten-Lernmodulen, Lernpfad und Statistik.",
+  "id": "./?v=1.1",
+  "name": "Verkäufertrainer · Lernreise",
+  "short_name": "Verkäufertrainer",
+  "description": "Lern- und Testplattform mit 920 Verkäuferfragen und einer durchgehenden Verkäufer-Lernreise in 23 Etappen.",
   "lang": "de-DE",
   "start_url": "./?source=pwa",
   "scope": "./",
